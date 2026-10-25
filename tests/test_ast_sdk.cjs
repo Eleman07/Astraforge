@@ -10,7 +10,7 @@ const swSource=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 assert.match(workerSource,/pyodide\.mjs/);
 assert.doesNotMatch(workerSource,/importScripts\(/);
 assert.match(appSource,/new Worker\('\.\/worker\.js',\{type:'module'/);
-assert.match(swSource,/astraforge-ghpages-v5-module-worker/);
+assert.match(swSource,/astraforge-ghpages-v6-astra-autoload/);
 assert.match(swSource,/astra_simulator_client-1\.3\.0-py3-none-any\.whl/);
 assert.ok(fs.existsSync(path.join(root,'wheels','astra_simulator_client-1.3.0-py3-none-any.whl')));
 const log=[],globals=new Map(),calls=[],outputs=[];
@@ -42,6 +42,10 @@ const context={self:fakeSelf,testLoadPyodide:async()=>fakeRuntime,Promise,Set,Ma
 vm.createContext(context);vm.runInContext(code,context,{filename:'worker-test.js'});
 async function request(id,type,body={}){const result=new Promise(resolve=>listeners.push({id,resolve}));fakeSelf.onmessage({data:{id,type,...body}});return await result;}
 (async()=>{
+ const auto=await request(0,'exec',{name:'astra.py',files:{'astra.py':'import astra\nprint(astra.__version__)'}});
+ assert.equal(auto.kind,'done',JSON.stringify(auto));
+ assert.equal(calls.filter(item=>item[0]==='wheel-install').length,1,'import astra must autoinstall SDK');
+ assert.ok(calls.findIndex(x=>x[0]==='wheel-install')<calls.findIndex(x=>x[0]==='execute'),'wheel must install before script starts');
  const r1=await request(1,'packages',{packages:['numpy','astropy','astra-simulator-client']});
  assert.equal(r1.kind,'done',JSON.stringify(r1));
  assert.deepEqual([...r1.packages].sort(),['astra-simulator-client','astropy','numpy']);
@@ -55,6 +59,9 @@ async function request(id,type,body={}){const result=new Promise(resolve=>listen
  assert.equal(r4.kind,'done');assert.deepEqual([...r4.plots],[]);
  assert.ok(calls.some(item=>item[0]==='execute'&&item[1]==='print(2 + 2)'));
  assert.equal(globals.has('_af_local_wheel'),false);
+ const r5=await request(5,'exec',{name:'main.py',files:{'main.py':'print(123)'},autoAstra:true});
+ assert.equal(r5.kind,'done');
+ assert.equal(calls.filter(item=>item[0]==='wheel-install').length,1,'autoAstra must deduplicate SDK');
  assert.ok(outputs.some(x=>x.kind==='ready'));
  console.log('PASS 9: module worker, ASTRA, package loading, dedupe, native rejection and Python exec simulation');
 })().catch(e=>{console.error(e);process.exitCode=1;});

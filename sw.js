@@ -1,5 +1,5 @@
 /* GitHub Pages service worker. Network-first for app code to avoid stale releases. */
-const CACHE='astraforge-ghpages-v5-module-worker';
+const CACHE='astraforge-ghpages-v6-astra-autoload';
 const SHELL=['./','./index.html','./app.js','./catalog.js','./worker.js','./style.css','./manifest.webmanifest','./icons/logo.svg','./icons/icon-192.png','./icons/icon-512.png','./wheels/astra_simulator_client-1.3.0-py3-none-any.whl'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)));self.skipWaiting();});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});

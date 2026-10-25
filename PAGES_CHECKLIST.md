@@ -1,4 +1,4 @@
-# AstraForge 4.1 — GitHub Pages release checklist
+# AstraForge 4.2 — GitHub Pages release checklist
 
 1. Copy the root files `index.html`, `app.js`, `catalog.js`, `worker.js`, `style.css`, `sw.js`, `manifest.webmanifest`, `.nojekyll`, `README.md` and directories `icons/`, `docs/`, `tests/`, `wheels/` into the repository root on `main`.
 2. Verify Settings → Pages is enabled on `main / (root)` or the existing Pages workflow is active.
@@ -12,3 +12,6 @@
 10. Verify the JS console has no CDN, WebAssembly or CSP errors. If the download from `cdn.jsdelivr.net` is blocked, try a different network; do not assume Pyodide has been packaged into the small repository ZIP.
 
 Technical references: https://pyodide.org/en/stable/usage/webworker.html and https://pyodide.org/en/stable/usage/packages-in-pyodide.html
+
+11. Select Aerospace and **Run** `import astra; print(astra.__version__)` without pressing Load selected packages. Expected: `1.3.0`.
+12. Run the same script again: it should not reinstall the wheel (until runtime reset).

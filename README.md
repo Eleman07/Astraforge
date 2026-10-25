@@ -1,4 +1,4 @@
-# AstraForge 4.1 — Python engineering IDE
+# AstraForge 4.2 — Python engineering IDE
 
 A responsive, client-side Python 3.14 IDE for engineering and scientific work. Deployed as static files on GitHub Pages. [Engineering portfolio](https://elemanprojects.com).
 
@@ -19,7 +19,7 @@ A responsive, client-side Python 3.14 IDE for engineering and scientific work. D
 1. Upload the **contents of this folder** to the **root** of the public repository `Eleman07/Astraforge` (branch `main`). Do not upload just the ZIP or a containing directory.
 2. GitHub repository → **Settings → Pages** → **Deploy from branch** → `main` → `/(root)` → **Save**. Alternatively keep an already working Actions-based Pages deployment.
 3. Visit [AstraForge on GitHub Pages](https://eleman07.github.io/Astraforge/).
-4. In the browser, choose a discipline, press **Load selected packages**, and then **Run**. Standard library examples run without loading STEM toolkits.
+4. In the browser, choose a discipline and press **Run**. Normal Pyodide modules are loaded from imports; use **Load selected packages** if you want to preload the entire selected toolkit. Standard library examples run without loading STEM toolkits.
 5. If a previous site version remains visible, perform **Ctrl+Shift+R**; if necessary remove the old service worker in DevTools → Application → Service Workers and reload.
 
 The static site contains `index.html`, `app.js`, `catalog.js`, `worker.js`, `style.css`, `sw.js`, `manifest.webmanifest`, `/icons` and `/wheels`.
@@ -58,7 +58,7 @@ This list is clearly labeled **Desktop / server** in the IDE and those entries a
 
 ## ASTRA SDK
 
-The pure-Python file `wheels/astra_simulator_client-1.3.0-py3-none-any.whl` is installed using `micropip` when **ASTRA Simulator Client** is selected under Aerospace and you press **Load selected packages**.
+The pure-Python file `wheels/astra_simulator_client-1.3.0-py3-none-any.whl` is installed using `micropip` automatically when you press **Run** with Aerospace and ASTRA selected, or when your Python file contains `import astra` / `from astra... import ...`. You may also install it manually by pressing **Load selected packages**. Repeated runs in the same worker reuse the installation.
 
 ```python
 import astra
@@ -93,3 +93,17 @@ node tests/catalog.test.mjs
 ### Limitations and security
 
 Pyodide runs on the user's device, not in a cloud Python process. Native Tk GUIs, persistent servers, unported compiled packages, direct arbitrary sockets, hardware access and heavy GPU workloads are not equivalent to desktop/server Python. Running many large packages may exceed mobile RAM. Browser offline support is best-effort and **a first-run network connection is required**. The local project store belongs to one browser and is not synchronized across devices. Code and runtime execution have *not* been independently verified on the live Pages deployment as part of this package release.
+
+### Why `ModuleNotFoundError: No module named 'astra'` appeared in 4.1
+
+The 4.1 version placed the ASTRA wheel in `wheels/` but only installed it when
+`Load selected packages` was pressed. Pyodide's automatic import loader handles
+packages in the official Pyodide distribution, **not** custom wheels placed
+on GitHub Pages. AstraForge 4.2 lazily installs the wheel on the first run
+when selected in Aerospace or imported by the script. **Do not use desktop
+`venv`/`pip` instructions within a browser**.
+
+If the error persists after deploying, visit:
+`https://eleman07.github.io/Astraforge/wheels/astra_simulator_client-1.3.0-py3-none-any.whl`
+and confirm it downloads; then use Ctrl+Shift+R and, if necessary,
+unregister the previous service worker in browser DevTools.

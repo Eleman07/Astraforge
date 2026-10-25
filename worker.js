@@ -23,6 +23,10 @@ async function boot(id){
  return p;
 }
 const safeFilename=name=>typeof name==='string' && /^[\w .-]{1,100}\.(py|txt|md|json)$/i.test(name) && !name.startsWith('.');
+// Detect normal ASTRA imports even outside the Aerospace profile. The bundled
+// client is tiny, so install it lazily only when the code actually needs it.
+const importsAstra=source => /^\s*(?:import\s+astra(?:[\s,.]|$)|from\s+astra(?:[\s.]|$))/m.test(source)
+ || /\b__import__\(\s*['"]astra['"]\s*\)/.test(source);
 async function loadPackages(id,names){
  const unique=[...new Set(names)].slice(0,85);
  const unsupported=unique.filter(x=>!BROWSER_IDS.has(x)&&!BUNDLED_IDS.has(x));
@@ -41,6 +45,8 @@ async function loadPackages(id,names){
     await runtime.runPythonAsync('import micropip\nawait micropip.install(_af_local_wheel, deps=False)');
     const v=runtime.runPython('import astra; astra.__version__');
     if(v!=='1.3.0')throw Error('Unexpected ASTRA version: '+v);
+   }catch(error){
+    throw Error('ASTRA SDK wheel installation failed. Verify that the file is accessible: '+url+' — '+String(error?.message||error));
    }finally{runtime.globals.delete('_af_local_wheel');}
   }
   installed.add(name);
@@ -59,6 +65,11 @@ async function execute(id,data){
  runtime.setStdout({batched:text=>reply(id,'output',{stream:'stdout',text})});
  runtime.setStderr({batched:text=>reply(id,'output',{stream:'stderr',text})});
  const code=files[name];
+ // loadPackagesFromImports only recognizes Pyodide-distributed modules, not
+ // our site-hosted ASTRA wheel. Do this before executing the user's imports.
+ if(data.autoAstra===true || importsAstra(code)){
+  await loadPackages(id,['astra-simulator-client']);
+ }
  await runtime.loadPackagesFromImports(code);
  // Ensure __file__/__name__ identify the running file. These are simple per-run globals.
  runtime.globals.set('__file__',name);runtime.globals.set('__name__','__main__');

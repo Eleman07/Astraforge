@@ -66,3 +66,7 @@ The current release does not install such an adapter and does not silently rewri
 ## Publication and intellectual-property notice
 
 GitHub Pages distributes static files publicly. Anyone visiting the IDE can download the wheel and inspect its Python source. If this SDK is proprietary, do **not** publish it with a public GitHub Pages repository without authorization to distribute it.
+
+## AstraForge 4.2 automatic installation
+
+When running a Python file containing `import astra` or `from astra.client import AstraClient`, the browser worker now installs the site-hosted wheel automatically using `micropip`. Selecting Aerospace (with ASTRA SDK still selected) also installs the wheel on the first **Run**. No virtual environment or desktop `pip` is required.
