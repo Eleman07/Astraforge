@@ -93,7 +93,7 @@ export const MODULES = [
 .map(([id,name,description,group])=>Object.freeze({id,name,description,group,kind:'browser'}));
 
 export const SPECIAL_MODULES = Object.freeze([
- {id:'astra-simulator-client',name:'ASTRA Simulator Client 1.3.0',description:'Bundled Python SDK; browser network calls require a web adapter, HTTPS and CORS',group:'Aerospace',kind:'bundled'},
+ {id:'astra-simulator-client',name:'ASTRA Simulator Client 1.3.0',description:'SDK + pinned ASTRA physics engine: calls run locally in this browser; no Python server',group:'Aerospace',kind:'bundled'},
  {id:'pyfme',name:'PyFME',description:'Flight mechanics engine; legacy project, requires a compatible Python environment',group:'Aerospace',kind:'external',url:'https://github.com/AeroPython/PyFME'},
  {id:'tkinter',name:'Tkinter',description:'Native desktop GUI library; not available inside a browser',group:'Software',kind:'external',url:'https://docs.python.org/3/library/tkinter.html'},
  {id:'django',name:'Django',description:'Server-side web framework; cannot host its HTTP server on GitHub Pages',group:'Software',kind:'external',url:'https://www.djangoproject.com/'},

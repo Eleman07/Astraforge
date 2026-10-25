@@ -19,7 +19,7 @@ const context={self,testLoadPyodide:async()=>fake,Promise,Set,Map,Error,String,O
 vm.runInNewContext(content,context,{filename:'worker.js'});
 async function send(id,code,autoAstra=false){self.onmessage({data:{id,type:'exec',name:'main.py',files:{'main.py':code},autoAstra}});for(let i=0;i<150;i++){await new Promise(r=>setTimeout(r,2));const reply=responses.find(x=>x.id===id&&(x.kind==='done'||x.kind==='error'));if(reply)return reply;}throw Error('timeout');}
 (async()=>{
- let r=await send(1,'from astra.client import AstraClient\nprint(AstraClient)');assert.equal(r.kind,'done',r.error);assert.equal(installCount,1);
+ let r=await send(1,'from astra import __version__\nprint(__version__)');assert.equal(r.kind,'done',r.error);assert.equal(installCount,1);
  r=await send(2,'import astra as sdk');assert.equal(r.kind,'done',r.error);assert.equal(installCount,1);
  r=await send(3,'print(5)',true);assert.equal(r.kind,'done',r.error);assert.equal(installCount,1);
  r=await send(4,'print(5)',false);assert.equal(r.kind,'done',r.error);assert.equal(installCount,1);

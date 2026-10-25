@@ -1,0 +1,31 @@
+{
+  "name": "ASTRA Aerospace Simulator - browser engine",
+  "upstream": "Eleman07/ASTRA-Aerospace-Simulator",
+  "revision": "e5e8d16ae08d026d776e57f117fc677cb7084706",
+  "engine_version": "1.3.0",
+  "files": [
+    "astra/__init__.py",
+    "astra/planetary_6dof.py",
+    "astra/propulsion.py",
+    "astra/robustness.py",
+    "astra/atmosphere.py",
+    "astra/convergence.py",
+    "astra/wind.py",
+    "astra/aerodynamics.py",
+    "astra/nozzle.py",
+    "astra/gnc.py",
+    "astra/advanced.py",
+    "astra/celestial.py",
+    "astra/engine.py",
+    "astra/multirotor.py",
+    "astra/turbulence.py",
+    "astra/attitude.py",
+    "astra/engineering.py",
+    "astra/constants.py",
+    "astra/vehicle_design.py",
+    "astra/verification.py",
+    "browser_bridge.py",
+    "astra/fidelity_models.py"
+  ],
+  "license": "MIT (ASTRA contributors, 2026)"
+}

@@ -2,7 +2,9 @@
 import {BROWSER_IDS,BUNDLED_IDS,PYODIDE_VERSION} from './catalog.js';
 const CDN=`https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 const LOCAL_WHEELS={'astra-simulator-client':'./wheels/astra_simulator_client-1.3.0-py3-none-any.whl'};
-let runtime=null,bootPromise=null;
+let runtime=null,bootPromise=null,astraEnginePromise=null,astraEngineReady=false;
+const ASTRA_MANIFEST_URL=new URL('./astra-bridge/engine-manifest.json',self.location.href);
+const ASTRA_BRIDGE_URL=new URL('./astra-bridge/browser_client_bridge.py',self.location.href);
 const installed=new Set();
 let queue=Promise.resolve();
 const reply=(id,kind,extra={})=>self.postMessage({id,kind,...extra});
@@ -54,6 +56,70 @@ async function loadPackages(id,names){
  }
  return [...installed];
 }
+// ASTRA's Python simulation engine is imported into the SAME Pyodide runtime
+// as the public AstraClient wheel. API calls then dispatch in-process instead
+// of attempting urllib socket connections (unsupported in a browser worker).
+const usesAstraEngine=source => /\bAstraClient\b|\bfrom\s+astra\s+import\s+(?:client|engine|engineering|gnc)|\bfrom\s+astra\.(?:engine|browser|client|engineering|gnc|celestial|attitude)\b|\bimport\s+astra\.(?:engine|browser|client|engineering|gnc|celestial|attitude)\b/.test(source);
+async function fetchSource(url,cache){
+ // Only public, immutable ASTRA files from its pinned Git commit are accepted.
+ if(cache){const saved=await cache.match(url);if(saved?.ok)return saved.text();}
+ const response=await fetch(url,{mode:'cors',cache:'default'});
+ if(!response.ok)throw Error('HTTP '+response.status+' for '+url);
+ const copy=cache?response.clone():null;
+ const content=await response.text();
+ if(content.length>1_000_000)throw Error('ASTRA source file unexpectedly large: '+url);
+ if(cache)await cache.put(url,copy).catch(()=>{}); // cache is optional
+ return content;
+}
+async function ensureAstraEngine(id){
+ if(astraEngineReady)return;
+ if(astraEnginePromise)return astraEnginePromise;
+ astraEnginePromise=(async()=>{
+  await loadPackages(id,['astra-simulator-client']);
+  reply(id,'progress',{text:'Preparing local ASTRA physics engine (no server required)…'});
+  const manifestResponse=await fetch(ASTRA_MANIFEST_URL,{cache:'no-store'});
+  if(!manifestResponse.ok)throw Error('ASTRA source manifest is missing from the IDE: '+manifestResponse.status);
+  const manifest=await manifestResponse.json();
+  if(manifest.upstream!=='Eleman07/ASTRA-Aerospace-Simulator'||!/^[a-f0-9]{40}$/.test(manifest.revision)||!Array.isArray(manifest.files)||manifest.files.length>40)
+   throw Error('Invalid pinned ASTRA engine manifest');
+  const paths=manifest.files;
+  if(!paths.includes('browser_bridge.py')||!paths.includes('astra/engine.py')||paths.some(p=>!/^astra\/[a-z0-9_]+\.py$/.test(p)&&p!=='browser_bridge.py'))
+   throw Error('Unexpected ASTRA source path in manifest');
+  // GitHub raw and the jsDelivr GitHub mirror support cross-origin fetches.
+  const upstream=`https://raw.githubusercontent.com/${manifest.upstream}/${manifest.revision}/`;
+  const mirror=`https://cdn.jsdelivr.net/gh/${manifest.upstream}@${manifest.revision}/`;
+  const cache=typeof caches!=='undefined'?await caches.open('astraforge-astra-core-'+manifest.revision).catch(()=>null):null;
+  const sources=await Promise.all(paths.map(async (p,index)=>{
+   let code;
+   try{code=await fetchSource(upstream+p,cache);}catch(primary){
+    try{code=await fetchSource(mirror+p,cache);}catch(secondary){
+     throw Error('Cannot load ASTRA source '+p+'. GitHub: '+String(primary.message||primary)+'; mirror: '+String(secondary.message||secondary));
+    }
+   }
+   reply(id,'progress',{text:`ASTRA source ${index+1}/${paths.length}: ${p}`});
+   return [p,code];
+  }));
+  const adapterResponse=await fetch(ASTRA_BRIDGE_URL);
+  if(!adapterResponse.ok)throw Error('ASTRA browser adapter missing (HTTP '+adapterResponse.status+')');
+  const adapter=await adapterResponse.text();
+  const packageDir=runtime.runPython('import astra; list(astra.__path__)[0]');
+  // Retain ASTRA client.py from the installed wheel; add only the simulation modules.
+  for(const [path,source] of sources){
+   if(path==='astra/__init__.py')continue;
+   const dest=path==='browser_bridge.py'?'/home/pyodide/browser_bridge.py':packageDir+'/'+path.slice('astra/'.length);
+   runtime.FS.writeFile(dest,source,{encoding:'utf8'});
+  }
+  runtime.FS.writeFile('/home/pyodide/browser_client_bridge.py',adapter,{encoding:'utf8'});
+  runtime.runPython("import sys; sys.path.insert(0,'/home/pyodide') if '/home/pyodide' not in sys.path else None");
+  await runtime.runPythonAsync('import browser_client_bridge\nbrowser_client_bridge.activate()');
+  const check=runtime.runPython('from astra.client import AstraClient; AstraClient().status().get("name")');
+  if(check!=='ASTRA')throw Error('ASTRA Browser Engine self-check returned '+check);
+  astraEngineReady=true;
+  reply(id,'progress',{text:'ASTRA Browser Engine ready: Python simulation running on your device (no HTTP server).'});
+ })().catch(e=>{astraEnginePromise=null;throw Error('ASTRA browser engine could not start. '+String(e?.message||e))});
+ return astraEnginePromise;
+}
+
 async function execute(id,data){
  const {files={},name}=data;
  if(!safeFilename(name)||typeof files[name]!=='string')throw Error('Invalid active Python file');
@@ -70,6 +136,7 @@ async function execute(id,data){
  if(data.autoAstra===true || importsAstra(code)){
   await loadPackages(id,['astra-simulator-client']);
  }
+ if(usesAstraEngine(code))await ensureAstraEngine(id);
  await runtime.loadPackagesFromImports(code);
  // Ensure __file__/__name__ identify the running file. These are simple per-run globals.
  runtime.globals.set('__file__',name);runtime.globals.set('__name__','__main__');

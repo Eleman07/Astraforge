@@ -17,6 +17,18 @@ period = 2 * math.pi * math.sqrt(radius**3 / MU)
 print(f"Circular velocity: {velocity/1000:.3f} km/s")
 print(f"Orbital period:    {period/60:.2f} min")
 `;
+const ASTRA_EXAMPLE=`# ASTRA simulator — in-process browser engine (no server, no HTTP)
+from astra.client import AstraClient
+
+sim = AstraClient()
+print('ASTRA status:', sim.status())
+print('Available model families:', list(sim.models()))
+sim.reset(vehicle='space', scenario='mission')
+sim.launch()
+for _ in range(5):
+    state = sim.step(0.1)
+    print('t =', state.get('time_s'), 's, altitude =', state.get('altitude_m'), 'm')
+`;
 let files={'main.py':DEMO},active='main.py';
 let pyWorker=null,running=false,nextId=1,toastTimer=null,deadline=null;
 const pending=new Map();
@@ -71,7 +83,7 @@ async function runCode(){if(running)return;updateBusy(true);await saveFiles();$(
  try{
   const autoAstra=$('role').value==='aerospace' && getSelection('aerospace').has('astra-simulator-client');
   const result=await send('exec',{files,name:active,autoAstra});for(const [i,base64] of (result.plots||[]).entries()){const img=document.createElement('img');img.alt='Matplotlib figure '+(i+1);img.src='data:image/png;base64,'+base64;$('plotZone').append(img);}log('\nCompleted in '+((performance.now()-start)/1000).toFixed(2)+' s\n');}catch(e){log('\n'+e.message+'\n',true);}finally{clearTimeout(deadline);updateBusy(false);}}
-async function installPackages(){if(running)return;const selected=getSelection($('role').value);const names=[...selected].filter(x=>BROWSER_IDS.has(x)||BUNDLED_IDS.has(x));if(!names.length){toast('Select at least one browser package');return;}updateBusy(true);log('\nInstalling '+names.length+' selected packages. Large libraries may take time…\n');try{const response=await send('packages',{packages:names});for(const id of response.packages||[])installed.add(id);toast('Packages loaded: '+names.length);if(installed.has('astra-simulator-client'))log('ASTRA SDK v1.3.0 import available. Remote ASTRA API requires HTTPS+CORS and a browser-compatible transport.\n');}catch(e){log(e.message+'\n',true);toast('Package installation incomplete');}finally{updateBusy(false);}}
+async function installPackages(){if(running)return;const selected=getSelection($('role').value);const names=[...selected].filter(x=>BROWSER_IDS.has(x)||BUNDLED_IDS.has(x));if(!names.length){toast('Select at least one browser package');return;}updateBusy(true);log('\nInstalling '+names.length+' selected packages. Large libraries may take time…\n');try{const response=await send('packages',{packages:names});for(const id of response.packages||[])installed.add(id);toast('Packages loaded: '+names.length);if(installed.has('astra-simulator-client'))log('ASTRA SDK ready. First AstraClient call loads the local simulation engine; no server required.\n');}catch(e){log(e.message+'\n',true);toast('Package installation incomplete');}finally{updateBusy(false);}}
 function download(filename,text){const obj=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=obj;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(obj),2000);}
 function toggleMobile(id){const el=$(id);el.classList.toggle('open');if(el.classList.contains('open'))$(id==='sidebar'?'rightbar':'sidebar').classList.remove('open');}
 async function askAI(){const key=$('aiKey').value.trim(),prompt=$('aiPrompt').value.trim(),model=$('aiModel').value.trim()||'openrouter/free';if(!key){toast('Enter your OpenRouter API key');return;}if(!prompt){toast('Write your question first');return;}const add=(text,who)=>{const bubble=document.createElement('div');bubble.className='ai-msg '+who;bubble.textContent=text;$('aiMessages').append(bubble);$('aiMessages').scrollTop=$('aiMessages').scrollHeight;};add(prompt,'user');$('btnAsk').disabled=true;
@@ -86,6 +98,7 @@ async function init(){for(const [key,p] of Object.entries(PROFILES)){const o=doc
  $('btnNew').onclick=()=>{const filename=window.prompt('New Python filename','simulation.py');if(filename===null)return;if(!safeFile(filename)){toast('Use .py, .txt, .json or .md and a simple filename');return;}if(!Object.hasOwn(files,filename))files[filename]='# New file\n';switchFile(filename);};
  $('btnImport').onclick=()=>$('importInput').click();$('importInput').onchange=async e=>{for(const file of [...e.target.files].slice(0,20)){if(!safeFile(file.name)||file.size>1048576){toast('Unsupported filename or file larger than 1 MB');continue;}files[file.name]=await file.text();active=file.name;}$('editor').value=files[active];renderFiles();updateLineNumbers();void saveFiles();e.target.value='';};
  $('btnExport').onclick=()=>{files[active]=$('editor').value;download(active,files[active]);};
+ $('btnAstraDemo').onclick=()=>{files[active]=$('editor').value;const filename='astra_browser_demo.py';files[filename]=ASTRA_EXAMPLE;switchFile(filename);$('role').value='aerospace';updateProfile();void saveFiles();toast('ASTRA example ready — press Run');};
  $('role').onchange=()=>{updateProfile();void saveFiles();};$('packageSearch').oninput=renderPackages;$('btnAllPackages').onclick=()=>{showAll=!showAll;$('btnAllPackages').setAttribute('aria-pressed',String(showAll));renderPackages();};
  $('btnSettings').onclick=()=>$('settingsDialog').showModal();$('closeSettings').onclick=()=>$('settingsDialog').close();$('btnGithub').onclick=()=>$('githubDialog').showModal();$('closeGithub').onclick=()=>$('githubDialog').close();
  $('btnRailPackages').onclick=()=>{$('sidebar').classList.add('open');$('packageSearch').focus();};$('btnRailAI').onclick=()=>toggleMobile('rightbar');$('btnAI').onclick=()=>toggleMobile('rightbar');$('btnCloseAI').onclick=()=>$('rightbar').classList.remove('open');$('btnSide').onclick=()=>toggleMobile('sidebar');

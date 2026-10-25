@@ -1,109 +1,84 @@
-# AstraForge 4.2 — Python engineering IDE
+# AstraForge 4.3 — Engineering IDE + ASTRA Browser Engine
 
-A responsive, client-side Python 3.14 IDE for engineering and scientific work. Deployed as static files on GitHub Pages. [Engineering portfolio](https://elemanprojects.com).
+A browser-based Python 3.14 engineering IDE for static hosting on GitHub Pages. [Launch the IDE](https://eleman07.github.io/Astraforge/) · [Open the ASTRA 3D viewer](https://eleman07.github.io/ASTRA---Aerospace-Simulator/) · [Engineering portfolio](https://elemanprojects.com).
 
-![AstraForge desktop IDE](docs/preview-desktop.png)
+![AstraForge desktop screenshot](docs/preview-desktop.png)
 
-## Technical overview
+## ASTRA engine integration — no server required
 
-- **Python 3.14**: Pyodide `314.0.7` runs in a **module Web Worker**. This corrects the previous `importScripts()` loading failure. A compatible browser and network access to `cdn.jsdelivr.net` are required on first use.
-- **Library catalog**: 16 engineering/science profiles and 87 catalog entries, with selected recommended packages and on-demand installation. 6 marked desktop/server-only entries are intentionally not installable on GitHub Pages.
-- **Aerospace**: Astropy, REBOUND/REBOUNDx, CasADi, SciPy, NumPy, SymPy, Matplotlib, galpy, Cartopy, CoolProp and the bundled **ASTRA Simulator Client 1.3.0**.
-- **Other disciplines**: mechanics, computers, electronics, electrical systems, chemical processes, energy, management, materials, biomedical, automation, AI, telecommunications, mathematics and physics. Each profile exposes relevant specialized libraries.
-- **Editor and output**: file tabs, keyboard shortcuts, local IndexedDB storage, file import/export and Matplotlib PNG output.
-- **Optional AI**: user-provided OpenRouter API key, never hardcoded or stored; prompt and current code are transmitted to OpenRouter only if the user clicks Send.
-- **Responsive UI**: editor / Explorer / console / assistant layout; drawer navigation on small screens.
+**Version 4.3 eliminates the socket timeout caused by `urllib.request.urlopen` when running the ASTRA HTTP client within Pyodide.** The original `astra-simulator-client` 1.3.0 wheel is still installed from `wheels/`. When a file uses `AstraClient`, the IDE loads the real ASTRA Python physics modules into **the same Pyodide interpreter**, then patches only that interpreter's client's HTTP dispatch to invoke ASTRA's existing `browser_bridge.route_raw()` directly.
 
-## Use in GitHub Pages
+The ASTRA engine uses the original Python simulation algorithms: models, mission state, step/reset/launch, engineering analyses and other compatible endpoints. **No localhost server, VPS, remote API or CORS proxy is required** for these calls. Nothing is deployed as a server-side Python API.
 
-1. Upload the **contents of this folder** to the **root** of the public repository `Eleman07/Astraforge` (branch `main`). Do not upload just the ZIP or a containing directory.
-2. GitHub repository → **Settings → Pages** → **Deploy from branch** → `main` → `/(root)` → **Save**. Alternatively keep an already working Actions-based Pages deployment.
-3. Visit [AstraForge on GitHub Pages](https://eleman07.github.io/Astraforge/).
-4. In the browser, choose a discipline and press **Run**. Normal Pyodide modules are loaded from imports; use **Load selected packages** if you want to preload the entire selected toolkit. Standard library examples run without loading STEM toolkits.
-5. If a previous site version remains visible, perform **Ctrl+Shift+R**; if necessary remove the old service worker in DevTools → Application → Service Workers and reload.
+First use downloads 22 Python source files from the public, MIT-licensed [ASTRA Aerospace Simulator](https://github.com/Eleman07/ASTRA-Aerospace-Simulator), pinned to commit `e5e8d16ae08d026d776e57f117fc677cb7084706`. The worker uses GitHub's raw file service with a jsDelivr mirror fallback; downloaded source is cached in the browser where Cache Storage is supported. The core Pyodide runtime also requires Internet access initially. The 3D viewer link opens a **separate simulation session**, not a synchronized renderer of the IDE's internal simulation state.
 
-The static site contains `index.html`, `app.js`, `catalog.js`, `worker.js`, `style.css`, `sw.js`, `manifest.webmanifest`, `/icons` and `/wheels`.
+### First test
 
-## Recommended toolkit modules and compatibility
-
-Package names shown with no warning are included in the official [Pyodide 314.0.7 package index](https://pyodide.org/en/stable/usage/packages-in-pyodide.html), although particular workflows may still be limited by WebAssembly/browser capabilities or memory. **Packages are NOT all downloaded at startup.**
-
-| Profile | Typical recommended libraries |
-|---|---|
-| Aerospace | `astropy`, `rebound`, `casadi`, `numpy`, `scipy`, `sympy`, `matplotlib`, ASTRA SDK |
-| Mechanical | `coolprop`, `casadi`, `numpy`, `scipy`, `sympy`, `uncertainties` |
-| Computer science | `pytest`, `pandas`, `networkx`, `pyyaml`, `numpy`, `rich` |
-| Electronics | `inspice`, `pywavelets`, `scipy`, `numpy`, `sympy` |
-| Electrical | `networkx`, `coolprop`, `casadi`, `scipy`, `numpy` |
-| Chemical | `coolprop`, `numpy`, `scipy`, `pandas`, `sympy` |
-| Energy | `coolprop`, `highspy`, `scipy`, `numpy`, `pandas` |
-| Management | `highspy`, `statsmodels`, `networkx`, `pandas`, `scipy` |
-| Biomedical | `biopython`, `scikit-image`, `scipy`, `pandas`, `numpy` |
-| Materials | `scikit-image`, `coolprop`, `scipy`, `pandas`, `numpy` |
-| Automation / robotics | `casadi`, `scipy`, `numpy`, `sympy`, `matplotlib` |
-| AI | `scikit-learn`, `xgboost`, `numpy`, `pandas`, `matplotlib` |
-| Telecommunications | `pywavelets`, `bitstring`, `networkx`, `scipy`, `numpy` |
-| Mathematics | `sympy`, `mpmath`, `statsmodels`, `scipy`, `numpy` |
-| Physics | `unyt`, `uncertainties`, `scipy`, `sympy`, `numpy` |
-| General Python | `pytest`, `pandas`, `numpy`, `sympy`, `matplotlib` |
-
-### Not supported as executable browser packages
-
-- **Tkinter** — needs a desktop GUI runtime and a Tk display, which browsers cannot provide.
-- **Django** — server-side HTTP app framework; GitHub Pages cannot start or host Django's server.
-- **PyFME** — legacy flight mechanics engine; requires separate compatible native Python verification. Its official repository indicates that it is no longer maintained.
-- **PyTorch/CUDA**, **pyserial**, **RDKit** — listed as external tools or requiring further compatibility work; the UI does not claim they are installed.
-
-This list is clearly labeled **Desktop / server** in the IDE and those entries are disabled for browser installation.
-
-## ASTRA SDK
-
-The pure-Python file `wheels/astra_simulator_client-1.3.0-py3-none-any.whl` is installed using `micropip` automatically when you press **Run** with Aerospace and ASTRA selected, or when your Python file contains `import astra` / `from astra... import ...`. You may also install it manually by pressing **Load selected packages**. Repeated runs in the same worker reuse the installation.
+1. Open [AstraForge](https://eleman07.github.io/Astraforge/).
+2. Select **Aerospace engineering**.
+3. Click **Create ASTRA simulator example** (or paste the snippet below into a `.py` file).
+4. Press **Run**. The wheel and 22 engine files load automatically the first time, without clicking “Load selected packages.”
+5. Check the output for “ASTRA Browser Engine ready” and `ASTRA status`.
 
 ```python
-import astra
 from astra.client import AstraClient
-print(astra.__version__)  # 1.3.0
+
+sim = AstraClient()  # in-browser simulator; no HTTP requests
+print(sim.status())
+print(list(sim.models()))
+sim.reset(vehicle='space', scenario='mission')
+sim.launch()
+for _ in range(5):
+    state = sim.step(0.1)
+    print(state.get('time_s'), state.get('altitude_m'))
 ```
 
-The client package may import successfully but its standard `urllib` network transport will not directly work against a remote ASTRA server from the browser. Remote calls require an HTTPS/CORS API and browser-compatible transport, implemented separately. See [SDK installation notes](docs/ASTRA_SDK_INSTALL.md).
+Other SDK APIs such as `engineering()`, `vehicle_parts()`, `convergence()` and `robustness()` use the same dispatch layer. Some computationally intensive routines may exceed the execution limit or available RAM on mobile devices.
 
-**License caution:** if you publish this repository, the wheel is also publicly downloadable. Make sure distribution is permitted.
+### Where the files are
 
-## Local development
+| Path | Purpose |
+|---|---|
+| `worker.js` | Pyodide ES module worker, installer, ASTRA source loader and Python execution |
+| `astra-bridge/engine-manifest.json` | Pinned upstream source manifest; 22 Python sources |
+| `astra-bridge/browser_client_bridge.py` | In-process compatibility adapter preserving original SDK public methods |
+| `wheels/astra_simulator_client-1.3.0-py3-none-any.whl` | User-provided original ASTRA SDK 1.3.0 |
+| `examples/astra_browser_demo.py` | Standalone demonstration to paste into the browser editor |
+| `sw.js` | PWA assets, cache version changed to v7 to invalidate earlier releases |
 
-From this directory, run:
+This implementation patches the Python client only **inside AstraForge's WebAssembly runtime**. Installing the wheel on ordinary desktop Python continues to use the original HTTP transport and requires `python server.py` if you want a native HTTP client. To launch that native server, see the source repo's `server.py`.
 
-```bash
-python3 -m http.server 8080
-```
+### Limitations
 
-Open `http://localhost:8080`. Do not open `index.html` as a `file://` URL: workers, ES modules and service workers require an HTTP(S) origin.
+- Initial online access to the Pyodide CDN and pinned ASTRA code is required. Cached source may work later without a network, but offline behavior is not guaranteed on every browser.
+- The current Github Pages PWA is not a general desktop runtime. Native Tkinter, a Django server, PyFME and arbitrary native libraries are not supported by the browser runtime.
+- Code running in the tab is isolated from other users' browser tabs; the ASTRA online 3D viewer is not automatically connected to this physics state.
+- This release was validated with automated JavaScript worker simulations and Python tests against the original ASTRA wheel, plus a local UI check. **Fetching and running ASTRA's actual source under the live GitHub Pages origin was not possible in the testing environment.** Test the real deployment before calling it fully verified.
+- ASTRA is an experimental/educational simulator, not flight-certified software.
 
-Check the static JavaScript and catalog tests:
+## IDE features
+
+Python 3.14 using Pyodide 314.0.7; Web Worker execution; local workspace IndexedDB; import/export of Python files; matplotlib plots; OpenRouter copilot with user-provided API key; 16 STEM disciplines and 87 curated package listings. Desktop/server-only modules are clearly marked and not installed via Pyodide.
+
+## Deploy to GitHub Pages
+
+Run the commands described in [GITHUB_UPDATE_IT.md](GITHUB_UPDATE_IT.md). The repository is `Eleman07/Astraforge` (`main`, `/(root)`). Upload the **contents** of this directory to the repository root. Keep `astra-bridge/` and `wheels/` directories when updating. Then open [AstraForge](https://eleman07.github.io/Astraforge/) after Pages deploys; use `Ctrl+Shift+R` or unregister the old Service Worker if stale files remain.
+
+## Tests
 
 ```bash
 node --check app.js
 node --check worker.js
 node --check catalog.js
-node tests/test_ast_sdk.cjs
 node tests/catalog.test.mjs
+node tests/test_ast_sdk.cjs
+node tests/test_ast_sdk_imports.cjs
+node tests/test_browser_engine.cjs
+python3 -m unittest discover -s tests -p 'test_browser_bridge.py' -v
 ```
 
-### Limitations and security
+All files can be tested locally with `python3 -m http.server 8080` from the directory root and `http://localhost:8080/`. Do not open `index.html` using `file://`.
 
-Pyodide runs on the user's device, not in a cloud Python process. Native Tk GUIs, persistent servers, unported compiled packages, direct arbitrary sockets, hardware access and heavy GPU workloads are not equivalent to desktop/server Python. Running many large packages may exceed mobile RAM. Browser offline support is best-effort and **a first-run network connection is required**. The local project store belongs to one browser and is not synchronized across devices. Code and runtime execution have *not* been independently verified on the live Pages deployment as part of this package release.
+## Licensing
 
-### Why `ModuleNotFoundError: No module named 'astra'` appeared in 4.1
-
-The 4.1 version placed the ASTRA wheel in `wheels/` but only installed it when
-`Load selected packages` was pressed. Pyodide's automatic import loader handles
-packages in the official Pyodide distribution, **not** custom wheels placed
-on GitHub Pages. AstraForge 4.2 lazily installs the wheel on the first run
-when selected in Aerospace or imported by the script. **Do not use desktop
-`venv`/`pip` instructions within a browser**.
-
-If the error persists after deploying, visit:
-`https://eleman07.github.io/Astraforge/wheels/astra_simulator_client-1.3.0-py3-none-any.whl`
-and confirm it downloads; then use Ctrl+Shift+R and, if necessary,
-unregister the previous service worker in browser DevTools.
+ASTRA Aerospace Simulator's publicly available source is under the MIT License; see the [upstream LICENSE](https://github.com/Eleman07/ASTRA-Aerospace-Simulator/blob/main/LICENSE). The original SDK wheel is publicly downloadable when this IDE is published. Keep attribution and check your distribution rights before changing either component.

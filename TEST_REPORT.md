@@ -1,25 +1,17 @@
-# AstraForge 4.2 — test report
+# AstraForge 4.3 — Verification report
 
-## Bug addressed
+## Tested here
 
-The bundled `astra_simulator_client` wheel was included on the site, but the application only loaded it via the manual **Load selected packages** action. `pyodide.loadPackagesFromImports` does not install arbitrary bundled Python wheels.
+- Python syntax compilation for `browser_client_bridge.py` and sample script
+- Import of original ASTRA 1.3.0 SDK wheel on standard Python
+- Eight Python integration tests against the **real wheel** and a test-double ASTRA `route_raw` dispatcher: status, models, state, reset, step, engineering methods, timeout compatibility, endpoint validation, rejection of remote URLs
+- Node.js tests for Pyodide worker boot (mocked), SDK autoinstall and one-time installation, ASTRA source manifest (22 items), fetch and virtual FS placement, bridge activation *before* user script runs, subsequent run deduplication, non-ASTRA code execution
+- Catalog suite: 16 STEM disciplines, 87 catalog items
+- Static asset and UI element tests including example creation button, manifest, file layout, CSP and PWA cache bump
+- JavaScript syntax (`node --check`), local Python compile and ZIP archive integrity
 
-## Changes
+## Not verified here
 
-- The browser worker proactively runs the bundled ASTRA install before running scripts containing `import astra` or `from astra... import ...`.
-- Running while the Aerospace profile has the bundled ASTRA client selected also installs the SDK on demand.
-- Installation is deduplicated across runs of one active worker; **Reset** starts a new runtime.
-- Installation failures include the precise URL to troubleshoot.
-- Service Worker cache bumped to `astraforge-ghpages-v6-astra-autoload`.
+The environment does not allow Chromium to navigate to HTTP(S) sites (it returns `ERR_BLOCKED_BY_ADMINISTRATOR`) and does not allow raw.githubusercontent.com downloads from the container. Therefore **an actual run of upstream ASTRA physics files inside Pyodide, including real network fetches/CORS/cache and mobile-device performance, has not been tested here**. The live GitHub Pages site is not modified. You must publish this version and perform the browser test described in `GITHUB_UPDATE_IT.md`.
 
-## Checks completed
-
-- `node --check` — **PASS** for worker.js, app.js, sw.js and catalog.js.
-- `node tests/catalog.test.mjs` — **PASS**, 16 profiles with 87 catalog entries.
-- `node tests/test_ast_sdk.cjs` — **PASS**, mocked Web Worker/Pyodide exercise package dedupe, non-browser package rejection, execution order and ASTRA auto-install.
-- `node tests/test_ast_sdk_imports.cjs` — **PASS**, import ASTRA variants and Aerospace mode against mocked Python runtime.
-- `pip install --target` from provided wheel + `import astra; from astra.client import AstraClient` — **PASS**, SDK version 1.3.0 in standard Python.
-- Local HTTP GET `/wheels/astra_simulator_client-1.3.0-py3-none-any.whl` — **PASS**, 200 and 4164 bytes.
-- Browser E2E and real Pyodide installation on GitHub Pages — **NOT VERIFIED**. Chromium launched, but container policy blocked navigation to localhost; external Pyodide CDN was not available for end-to-end testing.
-
-This release has not been pushed to GitHub automatically. Run the steps in `GITHUB_UPDATE_IT.md`.
+This implementation avoids the original `urllib.urlopen()` network timeout **by routing the client to the in-process ASTRA browser physics engine**, rather than by starting a server. The upstream source files must be reachable on first use; mirror availability can vary.
