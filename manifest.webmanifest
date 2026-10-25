@@ -1,14 +1,14 @@
 {
-  "name": "AstraForge — Engineering Studio",
+  "name": "AstraForge — Python Engineering IDE",
   "short_name": "AstraForge",
   "id": "./",
-  "description": "Offline-capable Python 3.14 engineering IDE, runs in your browser",
+  "description": "Python 3.14 scientific workspace for the browser with discipline-specific STEM packages",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#080c16",
-  "theme_color": "#0a0d18",
+  "background_color": "#191c21",
+  "theme_color": "#191c21",
   "icons": [
     {
       "src": "./icons/icon-192.png",

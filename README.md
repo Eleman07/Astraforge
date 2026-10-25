@@ -1,68 +1,95 @@
-# AstraForge 4.0 — Browser PWA for GitHub Pages
+# AstraForge 4.1 — Python engineering IDE
 
-An experimental **Python 3.14 browser IDE** built with Pyodide and Web Workers. It runs on the user's device, **not on GitHub servers**. The site is static and requires no VPS.
+A responsive, client-side Python 3.14 IDE for engineering and scientific work. Deployed as static files on GitHub Pages. [Engineering portfolio](https://elemanprojects.com).
 
-## Deploy free on GitHub Pages
+![AstraForge desktop IDE](docs/preview-desktop.png)
 
-1. Create an empty **public** GitHub repository named `astraforge-ide`.
-2. Copy/upload the **contents of this directory** to the root of the `main` branch. Keep `index.html`, `app.js`, `worker.js`, `style.css`, `sw.js`, `manifest.webmanifest`, `icons/`, and `.nojekyll` at root.
-3. In **Settings → Pages → Build and deployment** choose **Deploy from a branch**, `main`, `/(root)`; save.
-4. Open `https://YOUR_USERNAME.github.io/astraforge-ide/` after deployment. Replace `YOUR_USERNAME` with your actual GitHub account name.
-5. Confirm Python executes (test `print(2 + 2)`), then check Web Worker, Service Worker, manifest, local saving, smartphone layout and scientific package downloads.
+## Technical overview
 
-**Alternatively, from Ubuntu (after creating the empty repo):**
+- **Python 3.14**: Pyodide `314.0.7` runs in a **module Web Worker**. This corrects the previous `importScripts()` loading failure. A compatible browser and network access to `cdn.jsdelivr.net` are required on first use.
+- **Library catalog**: 16 engineering/science profiles and 87 catalog entries, with selected recommended packages and on-demand installation. 6 marked desktop/server-only entries are intentionally not installable on GitHub Pages.
+- **Aerospace**: Astropy, REBOUND/REBOUNDx, CasADi, SciPy, NumPy, SymPy, Matplotlib, galpy, Cartopy, CoolProp and the bundled **ASTRA Simulator Client 1.3.0**.
+- **Other disciplines**: mechanics, computers, electronics, electrical systems, chemical processes, energy, management, materials, biomedical, automation, AI, telecommunications, mathematics and physics. Each profile exposes relevant specialized libraries.
+- **Editor and output**: file tabs, keyboard shortcuts, local IndexedDB storage, file import/export and Matplotlib PNG output.
+- **Optional AI**: user-provided OpenRouter API key, never hardcoded or stored; prompt and current code are transmitted to OpenRouter only if the user clicks Send.
+- **Responsive UI**: editor / Explorer / console / assistant layout; drawer navigation on small screens.
 
-```bash
-cd astraforge_ghpages_ide
-git init && git branch -M main
-git add .nojekyll index.html app.js worker.js sw.js style.css manifest.webmanifest icons README.md
-git commit -m "Deploy AstraForge browser IDE"
-git remote add origin https://github.com/YOUR_USERNAME/astraforge-ide.git
-git push -u origin main
-```
+## Use in GitHub Pages
 
-### Local test before publishing
+1. Upload the **contents of this folder** to the **root** of the public repository `Eleman07/Astraforge` (branch `main`). Do not upload just the ZIP or a containing directory.
+2. GitHub repository → **Settings → Pages** → **Deploy from branch** → `main` → `/(root)` → **Save**. Alternatively keep an already working Actions-based Pages deployment.
+3. Visit [AstraForge on GitHub Pages](https://eleman07.github.io/Astraforge/).
+4. In the browser, choose a discipline, press **Load selected packages**, and then **Run**. Standard library examples run without loading STEM toolkits.
+5. If a previous site version remains visible, perform **Ctrl+Shift+R**; if necessary remove the old service worker in DevTools → Application → Service Workers and reload.
 
-```bash
-cd astraforge_ghpages_ide
-python3 -m http.server 8080
-# visit http://localhost:8080
-```
+The static site contains `index.html`, `app.js`, `catalog.js`, `worker.js`, `style.css`, `sw.js`, `manifest.webmanifest`, `/icons` and `/wheels`.
 
-### Subpath compatibility
+## Recommended toolkit modules and compatibility
 
-GitHub Pages project sites run under `/<repo>/`. Asset URLs, service worker registration and manifest scope use relative paths (`./`); the app's manifest `id` is also relative. The site should work without setting an absolute hostname or build base URL.
+Package names shown with no warning are included in the official [Pyodide 314.0.7 package index](https://pyodide.org/en/stable/usage/packages-in-pyodide.html), although particular workflows may still be limited by WebAssembly/browser capabilities or memory. **Packages are NOT all downloaded at startup.**
 
-### Important limitations
+| Profile | Typical recommended libraries |
+|---|---|
+| Aerospace | `astropy`, `rebound`, `casadi`, `numpy`, `scipy`, `sympy`, `matplotlib`, ASTRA SDK |
+| Mechanical | `coolprop`, `casadi`, `numpy`, `scipy`, `sympy`, `uncertainties` |
+| Computer science | `pytest`, `pandas`, `networkx`, `pyyaml`, `numpy`, `rich` |
+| Electronics | `inspice`, `pywavelets`, `scipy`, `numpy`, `sympy` |
+| Electrical | `networkx`, `coolprop`, `casadi`, `scipy`, `numpy` |
+| Chemical | `coolprop`, `numpy`, `scipy`, `pandas`, `sympy` |
+| Energy | `coolprop`, `highspy`, `scipy`, `numpy`, `pandas` |
+| Management | `highspy`, `statsmodels`, `networkx`, `pandas`, `scipy` |
+| Biomedical | `biopython`, `scikit-image`, `scipy`, `pandas`, `numpy` |
+| Materials | `scikit-image`, `coolprop`, `scipy`, `pandas`, `numpy` |
+| Automation / robotics | `casadi`, `scipy`, `numpy`, `sympy`, `matplotlib` |
+| AI | `scikit-learn`, `xgboost`, `numpy`, `pandas`, `matplotlib` |
+| Telecommunications | `pywavelets`, `bitstring`, `networkx`, `scipy`, `numpy` |
+| Mathematics | `sympy`, `mpmath`, `statsmodels`, `scipy`, `numpy` |
+| Physics | `unyt`, `uncertainties`, `scipy`, `sympy`, `numpy` |
+| General Python | `pytest`, `pandas`, `numpy`, `sympy`, `matplotlib` |
 
-- GitHub Pages requires a public repository with GitHub Free; all published browser files are inspectable. **Do not upload passwords, OpenRouter API keys, Google OAuth secrets, private code or server projects.**
-- The public **documentation-and-algorithms-only** project should be a **different repository**. This repository holds the running website; it is intentionally not documentation-only.
-- Pyodide is fetched from a third-party CDN on demand. Full offline Python execution is not guaranteed. Native Python extensions, CUDA, Linux shell, private GitHub OAuth, cloud sync and per-user server accounts are not implemented in this static MVP.
-- AI requires each user's personal OpenRouter key; the request goes to OpenRouter over the network and may have limits or costs depending on model.
-- GitHub Pages is for static websites; GitHub's rules prohibit using it as free hosting for a commercial SaaS. Use this deployment for the **free educational experimental PWA**, not a commercial SaaS offering.
-- GitHub Pages has service limits (site size, bandwidth and usage). Consult https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits.
+### Not supported as executable browser packages
 
-See the separate Italian deployment tutorial and technical showcase repository for GitHub documentation and demo assets.
+- **Tkinter** — needs a desktop GUI runtime and a Tk display, which browsers cannot provide.
+- **Django** — server-side HTTP app framework; GitHub Pages cannot start or host Django's server.
+- **PyFME** — legacy flight mechanics engine; requires separate compatible native Python verification. Its official repository indicates that it is no longer maintained.
+- **PyTorch/CUDA**, **pyserial**, **RDKit** — listed as external tools or requiring further compatibility work; the UI does not claim they are installed.
 
+This list is clearly labeled **Desktop / server** in the IDE and those entries are disabled for browser installation.
 
-## Aerospace preset: ASTRA Simulator Client 1.3.0
+## ASTRA SDK
 
-The **Aerospace engineering** profile now preselects `astra-simulator-client` together with NumPy, SciPy, SymPy and Matplotlib. Click **Load selected modules** to install the checked libraries. The supplied pure-Python wheel is distributed at:
-
-`wheels/astra_simulator_client-1.3.0-py3-none-any.whl`
-
-The installer uses `micropip.install()` with a **same-origin wheel URL** rather than `pyodide.loadPackage()`; the latter works only for packages in the Pyodide distribution. The wheel filename was normalized from the attached `(1).whl` download to the canonical PEP 427 filename without modifying the archive contents.
-
-Verify inside the AstraForge editor:
+The pure-Python file `wheels/astra_simulator_client-1.3.0-py3-none-any.whl` is installed using `micropip` when **ASTRA Simulator Client** is selected under Aerospace and you press **Load selected packages**.
 
 ```python
 import astra
 from astra.client import AstraClient
-print('ASTRA SDK:', astra.__version__)  # 1.3.0
+print(astra.__version__)  # 1.3.0
 ```
 
-**Important functional limitation:** ASTRA 1.3.0 is an HTTP client for an independently hosted ASTRA simulator. Its implementation uses the standard library's synchronous `urllib.request.urlopen()` and defaults to `http://127.0.0.1:8765`. Pyodide in browsers does not expose TCP sockets to Python; merely installing the SDK does **not** make its HTTP API calls work. For an online integration, the SDK needs a browser-capable `fetch()` adapter (or a supported proxy) plus a deployed ASTRA API with HTTPS, CORS and appropriate authentication. A phone's `localhost` is not the developer's PC.
+The client package may import successfully but its standard `urllib` network transport will not directly work against a remote ASTRA server from the browser. Remote calls require an HTTPS/CORS API and browser-compatible transport, implemented separately. See [SDK installation notes](docs/ASTRA_SDK_INSTALL.md).
 
-See [ASTRA SDK installation and compatibility](docs/ASTRA_SDK_INSTALL.md).
+**License caution:** if you publish this repository, the wheel is also publicly downloadable. Make sure distribution is permitted.
 
-Wheel SHA-256: `8198b833475948517ded0ae616dad4f82b15bee58290e0c5a2f3086e711b80cd`. The wheel is served publicly as part of the GitHub Pages site: don't distribute it there if it contains private code you don't intend to disclose.
+## Local development
+
+From this directory, run:
+
+```bash
+python3 -m http.server 8080
+```
+
+Open `http://localhost:8080`. Do not open `index.html` as a `file://` URL: workers, ES modules and service workers require an HTTP(S) origin.
+
+Check the static JavaScript and catalog tests:
+
+```bash
+node --check app.js
+node --check worker.js
+node --check catalog.js
+node tests/test_ast_sdk.cjs
+node tests/catalog.test.mjs
+```
+
+### Limitations and security
+
+Pyodide runs on the user's device, not in a cloud Python process. Native Tk GUIs, persistent servers, unported compiled packages, direct arbitrary sockets, hardware access and heavy GPU workloads are not equivalent to desktop/server Python. Running many large packages may exceed mobile RAM. Browser offline support is best-effort and **a first-run network connection is required**. The local project store belongs to one browser and is not synchronized across devices. Code and runtime execution have *not* been independently verified on the live Pages deployment as part of this package release.

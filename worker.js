@@ -1,74 +1,90 @@
-/* Browser-side Python Web Worker. No backend execution. Pyodide pinned to v314.0.7. */
-const PYODIDE_BASE="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
-let pyodide=null; let loading=null;let installed=new Set();
-// Custom, same-origin, pure-Python wheel shipped with AstraForge.
-// Never pass arbitrary user-supplied URLs to micropip.
-const CUSTOM_WHEELS=Object.freeze({
- "astra-simulator-client":"./wheels/astra_simulator_client-1.3.0-py3-none-any.whl"
-});
-function send(id,kind,data={}){self.postMessage({id,kind,...data});}
-async function initialize(id){
- if(pyodide)return;
- if(!loading)loading=(async()=>{
-  importScripts(PYODIDE_BASE+"pyodide.js");
-  pyodide=await self.loadPyodide({indexURL:PYODIDE_BASE});
-  pyodide.FS.mkdirTree("/home/pyodide/workspace");
- })();
- await loading; send(id,"ready",{version:pyodide.runPython("import sys; sys.version.split()[0]")});
+/** AstraForge Python Web Worker (Pyodide 314 = module worker; no importScripts). */
+import {BROWSER_IDS,BUNDLED_IDS,PYODIDE_VERSION} from './catalog.js';
+const CDN=`https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
+const LOCAL_WHEELS={'astra-simulator-client':'./wheels/astra_simulator_client-1.3.0-py3-none-any.whl'};
+let runtime=null,bootPromise=null;
+const installed=new Set();
+let queue=Promise.resolve();
+const reply=(id,kind,extra={})=>self.postMessage({id,kind,...extra});
+async function boot(id){
+ if(runtime)return runtime;
+ if(!bootPromise)bootPromise=(async()=>{
+  reply(id,'progress',{text:'Starting Python 3.14 WebAssembly engine…'});
+  // Dynamic module import turns CDN errors into actionable messages instead of an opaque Worker exception.
+  const {loadPyodide}=await import(CDN+'pyodide.mjs');
+  const instance=await loadPyodide({indexURL:CDN});
+  instance.FS.mkdirTree('/home/pyodide/workspace');
+  instance.runPython("import os; os.environ['MPLBACKEND']='Agg'");
+  runtime=instance;
+  return instance;
+ })().catch(err=>{bootPromise=null;throw new Error('Unable to load Pyodide 314.0.7. Check internet access and browser restrictions on cdn.jsdelivr.net. '+String(err));});
+ const p=await bootPromise;
+ reply(id,'ready',{version:p.runPython('import sys; sys.version.split()[0]')});
+ return p;
 }
-function safeName(value){return /^[A-Za-z0-9_ .-]{1,100}\.(py|txt|json|md)$/i.test(value)&&!value.startsWith(".");}
-async function handle(event){const {id,type}=event.data;
+const safeFilename=name=>typeof name==='string' && /^[\w .-]{1,100}\.(py|txt|md|json)$/i.test(name) && !name.startsWith('.');
+async function loadPackages(id,names){
+ const unique=[...new Set(names)].slice(0,85);
+ const unsupported=unique.filter(x=>!BROWSER_IDS.has(x)&&!BUNDLED_IDS.has(x));
+ if(unsupported.length)throw Error('Not available in the browser: '+unsupported.join(', '));
+ const fresh=unique.filter(x=>!installed.has(x));
+ for(const name of fresh){
+  if(BROWSER_IDS.has(name)){
+   reply(id,'progress',{text:'Loading '+name+'…'});
+   await runtime.loadPackage(name);
+  } else {
+   reply(id,'progress',{text:'Installing ASTRA Simulator Client 1.3.0…'});
+   await runtime.loadPackage('micropip');
+   const url=new URL(LOCAL_WHEELS[name],self.location.href).href;
+   runtime.globals.set('_af_local_wheel',url);
+   try{
+    await runtime.runPythonAsync('import micropip\nawait micropip.install(_af_local_wheel, deps=False)');
+    const v=runtime.runPython('import astra; astra.__version__');
+    if(v!=='1.3.0')throw Error('Unexpected ASTRA version: '+v);
+   }finally{runtime.globals.delete('_af_local_wheel');}
+  }
+  installed.add(name);
+  reply(id,'progress',{text:'Ready: '+name});
+ }
+ return [...installed];
+}
+async function execute(id,data){
+ const {files={},name}=data;
+ if(!safeFilename(name)||typeof files[name]!=='string')throw Error('Invalid active Python file');
+ for(const [filename,content] of Object.entries(files)){
+  if(safeFilename(filename)&&typeof content==='string'&&content.length<=1048576)
+   runtime.FS.writeFile('/home/pyodide/workspace/'+filename,content,{encoding:'utf8'});
+ }
+ runtime.FS.chdir('/home/pyodide/workspace');
+ runtime.setStdout({batched:text=>reply(id,'output',{stream:'stdout',text})});
+ runtime.setStderr({batched:text=>reply(id,'output',{stream:'stderr',text})});
+ const code=files[name];
+ await runtime.loadPackagesFromImports(code);
+ // Ensure __file__/__name__ identify the running file. These are simple per-run globals.
+ runtime.globals.set('__file__',name);runtime.globals.set('__name__','__main__');
+ await runtime.runPythonAsync(code);
+ let plots=[];
+ if(runtime.runPython("import sys; 'matplotlib.pyplot' in sys.modules")){
+  plots=JSON.parse(runtime.runPython(`import matplotlib.pyplot as _plt, io as _io, base64 as _b64, json as _json
+_af_plots=[]
+for _af_num in _plt.get_fignums()[:4]:
+    _af_buffer=_io.BytesIO()
+    _plt.figure(_af_num).savefig(_af_buffer,format='png',dpi=110)
+    _af_plots.append(_b64.b64encode(_af_buffer.getvalue()).decode('ascii'))
+_plt.close('all')
+_json.dumps(_af_plots)`));
+ }
+ return plots;
+}
+async function handle({data}){
+ const {id,type}=data;
  try{
-  await initialize(id);
-  if(type==="init"){send(id,"done",{version:pyodide.runPython("import sys; sys.version.split()[0]")});return;}
-  if(type==="packages"){
-   const candidates=(event.data.packages||[]).filter(x=>/^[a-z0-9][a-z0-9_-]{0,49}$/i.test(x)).slice(0,12);
-   const fresh=candidates.filter(x=>!installed.has(x));
-   const standard=fresh.filter(name=>!(name in CUSTOM_WHEELS));
-   if(standard.length){
-    send(id,"progress",{text:"Loading "+standard.join(", ")+" …"});
-    await pyodide.loadPackage(standard,{messageCallback:msg=>send(id,"progress",{text:msg})});
-    standard.forEach(name=>installed.add(name));
-   }
-   for(const name of fresh.filter(item=>item in CUSTOM_WHEELS)){
-    send(id,"progress",{text:"Installing ASTRA Simulator Client 1.3.0 …"});
-    await pyodide.loadPackage("micropip");
-    // Absolute same-origin URL also works when GitHub Pages serves the app under /<repo>/.
-    const wheelUrl=new URL(CUSTOM_WHEELS[name],self.location.href).href;
-    pyodide.globals.set("_astraforge_wheel_url",wheelUrl);
-    try{
-     await pyodide.runPythonAsync("import micropip\nawait micropip.install(_astraforge_wheel_url, deps=False)");
-     const version=pyodide.runPython("import astra; astra.__version__");
-     if(version!=="1.3.0")throw Error("Unexpected ASTRA SDK version: "+version);
-     installed.add(name);
-     send(id,"progress",{text:"ASTRA SDK v"+version+" installed and import verified."});
-    }finally{pyodide.globals.delete("_astraforge_wheel_url");}
-   }
-   send(id,"done",{packages:[...installed]});return;
-  }
-  if(type==="exec"){
-   const files=event.data.files||{},name=event.data.name;
-   if(!safeName(name))throw Error("Invalid filename");
-   for(const [filename,contents] of Object.entries(files)){
-    if(!safeName(filename)||typeof contents!=="string"||contents.length>1024*1024)continue;
-    pyodide.FS.writeFile("/home/pyodide/workspace/"+filename,contents,{encoding:"utf8"});
-   }
-   pyodide.FS.chdir("/home/pyodide/workspace");
-   const output=[];
-   pyodide.setStdout({batched:text=>{output.push(text);send(id,"output",{stream:"stdout",text});}});
-   pyodide.setStderr({batched:text=>{output.push(text);send(id,"output",{stream:"stderr",text});}});
-   const src=String(files[name]||"");
-   await pyodide.loadPackagesFromImports(src);
-   await pyodide.runPythonAsync(`import builtins\n__name__ = '__main__'\n__file__ = ${JSON.stringify(name)}`);
-   await pyodide.runPythonAsync(src);
-   let plots=[];
-   if(pyodide.runPython("import sys; 'matplotlib.pyplot' in sys.modules")){
-    const data=pyodide.runPython(`import matplotlib.pyplot as plt, io, base64, json\n__af_plots=[]\nfor __af_num in plt.get_fignums()[:3]:\n    __af_buffer=io.BytesIO()\n    plt.figure(__af_num).savefig(__af_buffer,format='png',dpi=90)\n    __af_plots.append(base64.b64encode(__af_buffer.getvalue()).decode('ascii'))\nplt.close('all')\njson.dumps(__af_plots)`);
-    plots=JSON.parse(data);
-   }
-   send(id,"done",{plots});return;
-  }
-  throw Error("Unsupported operation");
- }catch(error){send(id,"error",{error:String(error?.stack||error)});}
+  await boot(id);
+  if(type==='packages'){const names=Array.isArray(data.packages)?data.packages:[];reply(id,'done',{packages:await loadPackages(id,names)});return;}
+  if(type==='exec'){reply(id,'done',{plots:await execute(id,data)});return;}
+  if(type==='init'){reply(id,'done',{version:runtime.runPython('import sys; sys.version.split()[0]')});return;}
+  throw Error('Unsupported operation');
+ }catch(error){reply(id,'error',{error:String(error?.stack||error)});}
 }
-self.onmessage=e=>{void handle(e);};
+// Serialize message handling to avoid simultaneous Pyodide FS/global manipulation.
+self.onmessage=e=>{queue=queue.then(()=>handle(e),()=>handle(e));};

@@ -1,17 +1,14 @@
-# GitHub Pages release checklist
+# AstraForge 4.1 — GitHub Pages release checklist
 
-- [ ] GitHub repo name exactly matches the expected URL path, e.g. `astraforge-ide`.
-- [ ] `index.html`, `.nojekyll`, `sw.js`, and `manifest.webmanifest` are at repo root.
-- [ ] Settings → Pages → Deploy from branch → `main`, `/(root)`.
-- [ ] GitHub Actions/Pages deployment is green; public URL loads with HTTPS.
-- [ ] DevTools Network shows no 404 for `app.js`, `worker.js`, `sw.js`, CSS, icons, and manifest.
-- [ ] Python execution works (`print(2 + 2)`) when CDN is reachable.
-- [ ] Verify save/reload restores workspace and test responsive mobile layout.
-- [ ] Verify all AI keys are supplied individually by users, not embedded in repo.
-- [ ] Test offline behavior, but do not assume Pyodide will be cached.
-- [ ] If updating `sw.js`, increment cache ID to avoid stale assets.
+1. Copy the root files `index.html`, `app.js`, `catalog.js`, `worker.js`, `style.css`, `sw.js`, `manifest.webmanifest`, `.nojekyll`, `README.md` and directories `icons/`, `docs/`, `tests/`, `wheels/` into the repository root on `main`.
+2. Verify Settings → Pages is enabled on `main / (root)` or the existing Pages workflow is active.
+3. Site URL: https://eleman07.github.io/Astraforge/ (case-sensitive path).
+4. Reload without cache (Ctrl+Shift+R) after updating: legacy service workers may still serve older JS until activation.
+5. In the browser, run `print(2 + 2)` and ensure `4` appears. Then import NumPy and Astropy (download on demand).
+6. Choose Aerospace and install the selected modules, including `wheels/astra_simulator_client-1.3.0-py3-none-any.whl`. Test `import astra; print(astra.__version__)` (expect `1.3.0`).
+7. Check distinct profiles: Biomedical → Biopython; Energy → CoolProp; Telecommunications → bitstring; AI → scikit-learn.
+8. Search all modules for `django`, `tkinter` or `pyfme`: labels must show Desktop / server and the install checkbox must be disabled.
+9. Verify local save/reload, file import/export, responsive mobile layout, and optional OpenRouter behavior with a disposable personal API key.
+10. Verify the JS console has no CDN, WebAssembly or CSP errors. If the download from `cdn.jsdelivr.net` is blocked, try a different network; do not assume Pyodide has been packaged into the small repository ZIP.
 
-- [ ] Confirm `wheels/astra_simulator_client-1.3.0-py3-none-any.whl` was uploaded (GitHub Pages serves it at the same site origin).
-- [ ] Select Aerospace and click Load selected modules; verify `import astra; print(astra.__version__)` produces `1.3.0`.
-- [ ] Do not mistake SDK installation for remote ASTRA HTTP connectivity: the browser needs a separate API adapter and HTTPS+CORS server.
-- [ ] Ensure the wheel may legally be shared publicly.
+Technical references: https://pyodide.org/en/stable/usage/webworker.html and https://pyodide.org/en/stable/usage/packages-in-pyodide.html
