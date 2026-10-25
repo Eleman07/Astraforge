@@ -1,6 +1,6 @@
 # AstraForge 4.3 — Engineering IDE + ASTRA Browser Engine
 
-A browser-based Python 3.14 engineering IDE for static hosting on GitHub Pages. [Launch the IDE](https://eleman07.github.io/Astraforge/) · [Open the ASTRA 3D viewer](https://eleman07.github.io/ASTRA---Aerospace-Simulator/) · [Engineering portfolio](https://elemanprojects.com).
+A browser-based Python 3.14 engineering IDE for static hosting on GitHub Pages. [Launch the IDE](https://eleman07.github.io/Astraforge/) · [Open the ASTRA 3D viewer](https://eleman07.github.io/ASTRA-Aerospace-Simulator/) · [Engineering portfolio](https://elemanprojects.com).
 
 ![AstraForge desktop screenshot](docs/preview-desktop.png)
 
