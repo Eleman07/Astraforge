@@ -71,6 +71,9 @@ The IDE must not be used as an untrusted multiuser Python server; code runs loca
 
 The ASTRA wheel and pinned simulation engine are independently licensed. Retain upstream notices and comply with their licenses if redistributing. Three.js and Pyodide have their own licenses. Nothing in the ZIP embeds a paid API key.
 
+## Demo
+[DEMO YT](https://youtu.be/rrmSEMpewig)
+
 ## Interactive Python SDK
 
 For full examples and method signatures, read [`docs/INTERACTIVE_STUDIO_SDK.md`](docs/INTERACTIVE_STUDIO_SDK.md). The API is designed for Pyodide: it is **not** Tkinter or ModernGL API compatibility.
