@@ -4,3 +4,14 @@
 @media(max-width:850px){.assistant-panel{display:none;position:absolute;z-index:4;right:0;top:52px;bottom:0;width:min(340px,90vw);box-shadow:var(--shadow)}.assistant-panel.open{display:flex}.mobile-only{display:grid}.explorer{width:220px;flex-basis:220px}.brand-context,.brand-divider{display:none}.app-brand{min-width:0}.activity-rail{width:42px;flex-basis:42px}.status-right{display:none}}
 @media(max-width:650px){.app-header{height:49px;min-height:49px;padding:0 8px}.app-brand strong{font-size:12px}.app-header .engine-chip{font-size:10px;padding:5px 7px}.app-header .header-button{display:none}.app-body{position:relative}.activity-rail{display:none}.explorer{display:none;position:absolute;z-index:5;left:0;top:0;bottom:0;box-shadow:var(--shadow);width:min(300px,86vw)}.explorer.open{display:flex}.assistant-panel{top:0}.ide-main{width:100%}.editor-bar{height:42px}.editor-actions{gap:2px;padding:0 4px}.small-button{padding:5px 7px}.run-button{padding:7px 10px}.run-button kbd{display:none}.editor-tab{min-width:97px;padding:0 10px}.editor-breadcrumb{padding:7px 12px}.line-numbers{width:42px;flex-basis:42px;padding-left:3px;padding-right:9px;font-size:12px}.editor-content textarea{font-size:12px;padding-right:8px}.console-section{flex-basis:35%;min-height:140px}.status-bar{gap:10px}.status-bar span:nth-child(2){max-width:52vw;overflow:hidden;text-overflow:ellipsis}.assistant-panel.open{width:min(330px,93vw)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* Optional trusted-local native Python runtime; consistent with IDE shell. */
+.desktop-connect{display:flex;flex-direction:column;gap:8px;padding:0 12px 10px}
+.desktop-connect .panel-label{padding:4px 0 2px}.desktop-connect .profile-hint{margin:3px 0 6px}
+.desktop-connect .select-input{width:100%;min-width:0}
+.desktop-token{box-sizing:border-box;padding:9px;font:inherit}
+.desktop-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:9px 0}
+.desktop-actions button{font-size:11px;min-height:34px;white-space:normal}
+#desktopControls[hidden]{display:none!important}
+#desktopState{overflow-wrap:anywhere}
+@media(max-width:650px){.desktop-actions{grid-template-columns:1fr 1fr}}
