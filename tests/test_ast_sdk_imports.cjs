@@ -5,17 +5,18 @@ const vm=require('node:vm');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 let content=fs.readFileSync(path.join(root,'worker.js'),'utf8');
-content=content.replace(/^import \{[^}]+\} from '\.\/catalog\.js';/m, "const BROWSER_IDS=new Set();const BUNDLED_IDS=new Set(['astra-simulator-client']);const PYODIDE_VERSION='314.0.7';")
+content=content.replace(/^import \{[^}]+\} from '\.\/catalog\.js';/m, "const BROWSER_IDS=new Set();const BUNDLED_IDS=new Set(['astra-simulator-client']);const STDLIB_IDS=new Set(['sqlite3']);const PYODIDE_VERSION='314.0.7';")
  .replace("const {loadPyodide}=await import(CDN+'pyodide.mjs');", "const {loadPyodide}={loadPyodide:testLoadPyodide};");
 const files=[];const responses=[];let installCount=0;
 const fake={
- FS:{mkdirTree(){},writeFile(){},chdir(){}}, globals:{set(){},delete(){}},
+ FS:{mkdirTree(){},writeFile(){},chdir(){},readdir(){return []}}, globals:{set(){},delete(){}},
  runPython(source){if(source.includes('sys.version'))return '3.14';if(source.includes('astra.__version__'))return '1.3.0';if(source.includes('sys.modules'))return false;return null;},
  async runPythonAsync(source){if(source.includes('micropip.install'))installCount++;else files.push(source)},
  async loadPackagesFromImports(){},async loadPackage(){},setStdout(){},setStderr(){}
 };
 const self={location:{href:'https://eleman07.github.io/Astraforge/worker.js'},postMessage:data=>responses.push(data)};
-const context={self,testLoadPyodide:async()=>fake,Promise,Set,Map,Error,String,Object,Array,URL,console};
+const fakeFetch=async url=>({ok:true,text:async()=> '# test bridge'});
+const context={self,fetch:fakeFetch,testLoadPyodide:async()=>fake,Promise,Set,Map,Error,String,Object,Array,URL,console};
 vm.runInNewContext(content,context,{filename:'worker.js'});
 async function send(id,code,autoAstra=false){self.onmessage({data:{id,type:'exec',name:'main.py',files:{'main.py':code},autoAstra}});for(let i=0;i<150;i++){await new Promise(r=>setTimeout(r,2));const reply=responses.find(x=>x.id===id&&(x.kind==='done'||x.kind==='error'));if(reply)return reply;}throw Error('timeout');}
 (async()=>{

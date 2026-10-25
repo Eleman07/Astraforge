@@ -5,13 +5,33 @@
 @media(max-width:650px){.app-header{height:49px;min-height:49px;padding:0 8px}.app-brand strong{font-size:12px}.app-header .engine-chip{font-size:10px;padding:5px 7px}.app-header .header-button{display:none}.app-body{position:relative}.activity-rail{display:none}.explorer{display:none;position:absolute;z-index:5;left:0;top:0;bottom:0;box-shadow:var(--shadow);width:min(300px,86vw)}.explorer.open{display:flex}.assistant-panel{top:0}.ide-main{width:100%}.editor-bar{height:42px}.editor-actions{gap:2px;padding:0 4px}.small-button{padding:5px 7px}.run-button{padding:7px 10px}.run-button kbd{display:none}.editor-tab{min-width:97px;padding:0 10px}.editor-breadcrumb{padding:7px 12px}.line-numbers{width:42px;flex-basis:42px;padding-left:3px;padding-right:9px;font-size:12px}.editor-content textarea{font-size:12px;padding-right:8px}.console-section{flex-basis:35%;min-height:140px}.status-bar{gap:10px}.status-bar span:nth-child(2){max-width:52vw;overflow:hidden;text-overflow:ellipsis}.assistant-panel.open{width:min(330px,93vw)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 
-/* Optional trusted-local native Python runtime; consistent with IDE shell. */
-.desktop-connect{display:flex;flex-direction:column;gap:8px;padding:0 12px 10px}
-.desktop-connect .panel-label{padding:4px 0 2px}.desktop-connect .profile-hint{margin:3px 0 6px}
-.desktop-connect .select-input{width:100%;min-width:0}
-.desktop-token{box-sizing:border-box;padding:9px;font:inherit}
-.desktop-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:9px 0}
-.desktop-actions button{font-size:11px;min-height:34px;white-space:normal}
-#desktopControls[hidden]{display:none!important}
-#desktopState{overflow-wrap:anywhere}
-@media(max-width:650px){.desktop-actions{grid-template-columns:1fr 1fr}}
+/* AstraForge 5 browser-native workbench */
+[hidden]{display:none!important}
+.console-section.preview-expanded{flex:0 0 51%;max-height:65%}
+.console-tabs{gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.studio-tab{background:transparent;border:0;padding:9px 9px;color:#9faebb;font:600 10px/1.3 system-ui;white-space:nowrap;cursor:pointer;border-bottom:2px solid transparent}
+.studio-tab.active{color:#d5e7fa;border-bottom-color:#78a9dd;background:#26323d}
+.studio-content{height:100%;min-height:0;flex:1;overflow:auto;background:#1b2229}
+.panel-help{font-size:10px;color:#93a9bf;padding:6px 11px;border-bottom:1px solid #33404c}
+#sceneViewport{height:calc(100% - 60px);min-height:140px;position:relative;overflow:hidden}
+#sceneViewport canvas{display:block;width:100%;height:100%}
+.preview-caption{font-size:10px;color:#aebfcb;padding:4px 11px}
+#htmlPreview{width:100%;height:72%;border:0;background:#fff;min-height:180px}
+#declarativePreview{padding:16px;max-width:560px}
+#declarativePreview h3{margin:0 0 12px;font-size:14px}
+.web-field{display:flex;align-items:center;gap:12px;margin:9px 0;color:#cbd6e1;font-size:12px}
+.web-field input{background:#303c47;border:1px solid #536270;border-radius:5px;padding:8px;color:#eff5fc}
+#declarativePreview button{padding:8px 12px;color:white;background:#3b6b9a;border:0;border-radius:5px}
+.sql-tools{display:flex;align-items:center;gap:8px;padding:9px 12px;flex-wrap:wrap;font-size:11px}
+.sql-tools input{min-width:120px;width:170px;background:#28333f;color:#e8eef5;border:1px solid #455262;padding:7px;border-radius:5px}
+#sqlInput{display:block;margin:2px 12px 8px;width:calc(100% - 24px);height:62px;resize:vertical;background:#111820;color:#d7e4ef;border:1px solid #354657;padding:8px;font:11px/1.6 monospace}
+.sql-scroll{padding:0 12px;max-height:34%;overflow:auto}
+#sqlResults{border-collapse:collapse;width:100%;font:11px/1.5 monospace;color:#cad7e3}
+#sqlResults th,#sqlResults td{border:1px solid #344453;padding:5px 9px;text-align:left;white-space:nowrap}
+#sqlResults th{background:#293746}
+#sqlStatus{display:block;padding:9px 12px;color:#8fa9bd;font-size:10px}
+.example-picker{display:grid;grid-template-columns:1fr;gap:6px;padding:8px 13px}
+.example-picker label{color:#a0b1be;font-size:10px}
+.example-picker select{width:100%;background:#27343f;border:1px solid #425061;color:#dee7ef;padding:8px;border-radius:5px;font-size:11px}
+.example-picker button{padding:9px;border-radius:5px}
+@media(max-width:650px){.console-section.preview-expanded{flex-basis:55%;max-height:70%}.studio-tab{padding:9px 6px;font-size:10px}.console-subtitle{display:none}.sql-tools{gap:5px}.example-picker{padding:6px 10px}}

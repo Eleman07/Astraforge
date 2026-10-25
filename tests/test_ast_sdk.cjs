@@ -15,9 +15,10 @@ assert.match(swSource,/astra_simulator_client-1\.3\.0-py3-none-any\.whl/);
 assert.ok(fs.existsSync(path.join(root,'wheels','astra_simulator_client-1.3.0-py3-none-any.whl')));
 const log=[],globals=new Map(),calls=[],outputs=[];
 const fakeRuntime={
- FS:{mkdirTree(path){calls.push(['mkdir',path]);},writeFile(){},chdir(){}},
+ FS:{mkdirTree(path){calls.push(['mkdir',path]);},writeFile(){},chdir(){},readdir(){return []}},
  globals:{set(k,v){globals.set(k,v);},delete(k){globals.delete(k);}},
  runPython(source){
+  if(source.includes('json.dumps(astraforge_web.take_previews())'))return '{\"scene\":null,\"ui\":null,\"html\":null}';
   if(source.includes('sys.version'))return '3.14.5';
   if(source.includes('astra.__version__'))return '1.3.0';
   if(source.includes('matplotlib.pyplot')&&source.includes('sys.modules'))return false;
@@ -36,9 +37,10 @@ const fakeRuntime={
 const fakeSelf={location:{href:'https://example.github.io/Astraforge/worker.js'},postMessage(event){outputs.push(event);for(const waiter of listeners){if(event.id===waiter.id&&(event.kind==='done'||event.kind==='error'))waiter.resolve(event);}}};
 const listeners=[];
 let code=workerSource
- .replace(/^import \{[^}]+\} from '\.\/catalog\.js';/m,"const BROWSER_IDS=new Set(['numpy','astropy','casadi']); const BUNDLED_IDS=new Set(['astra-simulator-client']); const PYODIDE_VERSION='314.0.7';")
+ .replace(/^import \{[^}]+\} from '\.\/catalog\.js';/m,"const BROWSER_IDS=new Set(['numpy','astropy','casadi']); const BUNDLED_IDS=new Set(['astra-simulator-client']); const STDLIB_IDS=new Set(['sqlite3']); const PYODIDE_VERSION='314.0.7';")
  .replace("const {loadPyodide}=await import(CDN+'pyodide.mjs');",'const {loadPyodide}={loadPyodide:testLoadPyodide};');
-const context={self:fakeSelf,testLoadPyodide:async()=>fakeRuntime,Promise,Set,Map,Error,String,Object,Array,URL,console};
+const fakeFetch=async url=>({ok:true,text:async()=> '# test bridge'});
+const context={self:fakeSelf,fetch:fakeFetch,testLoadPyodide:async()=>fakeRuntime,Promise,Set,Map,Error,String,Object,Array,URL,console};
 vm.createContext(context);vm.runInContext(code,context,{filename:'worker-test.js'});
 async function request(id,type,body={}){const result=new Promise(resolve=>listeners.push({id,resolve}));fakeSelf.onmessage({data:{id,type,...body}});return await result;}
 (async()=>{

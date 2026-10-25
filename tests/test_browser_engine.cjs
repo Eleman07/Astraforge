@@ -15,9 +15,10 @@ assert.doesNotMatch(source,/importScripts\(/);
 const output=[],events=[],slots=[];const globals=new Map();
 let upstreamLoads=0,pythonEngineImports=0,wheelInstalls=0;
 const virtual={
- FS:{mkdirTree(p){events.push(['mkdir',p])},writeFile(p,s){events.push(['write',p]);},chdir(){}},
+ FS:{mkdirTree(p){events.push(['mkdir',p])},writeFile(p,s){events.push(['write',p]);},chdir(){},readdir(){return []}},
  globals:{set(k,v){globals.set(k,v)},delete(k){globals.delete(k)}},
  runPython(s){
+  if(s.includes('json.dumps(astraforge_web.take_previews())'))return '{\"scene\":null,\"ui\":null,\"html\":null}';
   if(s.includes('sys.version'))return '3.14.1';
   if(s.includes('astra.__version__'))return '1.3.0';
   if(s.includes('list(astra.__path__)'))return '/lib/python3.14/site-packages/astra';
@@ -37,6 +38,7 @@ const virtual={
 function response(body){return {ok:true,text:async()=>body,json:async()=>JSON.parse(body),clone(){return response(body)}}}
 const fakeFetch=async url=>{
  const u=url.toString();
+ if(u.endsWith('/astraforge_web.py'))return response('# test preview bridge');
  if(u.endsWith('/engine-manifest.json'))return response(JSON.stringify(manifest));
  if(u.endsWith('/browser_client_bridge.py'))return response(bridge);
  if(manifest.files.some(p=>u.endsWith('/'+p))){upstreamLoads++;return response('# downloaded pinned ASTRA simulator source\n')}
@@ -45,7 +47,7 @@ const fakeFetch=async url=>{
 const fakeCache={async match(){return null},async put(){}};
 const fakeCaches={async open(){return fakeCache}};
 const self={location:{href:'https://eleman07.github.io/Astraforge/worker.js'},postMessage(x){output.push(x);const slot=slots.find(w=>w.id===x.id&&(x.kind==='done'||x.kind==='error'));if(slot)slot.resolve(x)}};
-let code=source.replace(/^import \{[^}]+\} from '\.\/catalog\.js';/m,"const BROWSER_IDS=new Set(['numpy']);const BUNDLED_IDS=new Set(['astra-simulator-client']);const PYODIDE_VERSION='314.0.7';").replace("const {loadPyodide}=await import(CDN+'pyodide.mjs');", "const {loadPyodide}={loadPyodide:testLoadPyodide};");
+let code=source.replace(/^import \{[^}]+\} from '\.\/catalog\.js';/m,"const BROWSER_IDS=new Set(['numpy']);const BUNDLED_IDS=new Set(['astra-simulator-client']);const STDLIB_IDS=new Set(['sqlite3']);const PYODIDE_VERSION='314.0.7';").replace("const {loadPyodide}=await import(CDN+'pyodide.mjs');", "const {loadPyodide}={loadPyodide:testLoadPyodide};");
 const context={self,fetch:fakeFetch,caches:fakeCaches,testLoadPyodide:async()=>virtual,Promise,Set,Map,Error,String,Object,Array,URL,console};
 vm.createContext(context);
 vm.runInContext(code,context,{filename:'worker-mock.js'});

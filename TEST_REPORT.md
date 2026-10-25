@@ -1,17 +1,30 @@
-# AstraForge 4.3 — Verification report
+# AstraForge 5.0 — Verification results
 
-## Tested here
+**Status: application-level checks passed; live Pyodide / WebGL on public GitHub Pages remains unverified.**
 
-- Python syntax compilation for `browser_client_bridge.py` and sample script
-- Import of original ASTRA 1.3.0 SDK wheel on standard Python
-- Eight Python integration tests against the **real wheel** and a test-double ASTRA `route_raw` dispatcher: status, models, state, reset, step, engineering methods, timeout compatibility, endpoint validation, rejection of remote URLs
-- Node.js tests for Pyodide worker boot (mocked), SDK autoinstall and one-time installation, ASTRA source manifest (22 items), fetch and virtual FS placement, bridge activation *before* user script runs, subsequent run deduplication, non-ASTRA code execution
-- Catalog suite: 16 STEM disciplines, 87 catalog items
-- Static asset and UI element tests including example creation button, manifest, file layout, CSP and PWA cache bump
-- JavaScript syntax (`node --check`), local Python compile and ZIP archive integrity
+## Completed
 
-## Not verified here
+- **18 Python tests passed**, 1 Chromium UI test **skipped** because the test environment blocks browser navigation (`ERR_BLOCKED_BY_ADMINISTRATOR`). These cover the ASTRA client adapter, static assets, sample 3D/flight dynamics/UI/Jinja2 output and SQLite creation/query with native CPython.
+- **4 JavaScript/Node test suites passed**. The worker tests use a mocked Pyodide runtime; they verify ASTRA SDK installation, source load ordering and reuse, ASTRA import handling, package flags and recommended profiles. They do **not** prove live Pyodide startup.
+- Separate `node --check` passed for `app.js`, `worker.js`, `webviz.js`, `sw.js` and `catalog.js`.
+- Catalog validates **91 entries and 16 discipline profiles**, including SQLite (built-in), SQLAlchemy, DuckDB and Peewee.
+- Service Worker references resolve to existing local assets; all HTML element IDs are unique.
+- The release ZIP was verified for CRC integrity.
 
-The environment does not allow Chromium to navigate to HTTP(S) sites (it returns `ERR_BLOCKED_BY_ADMINISTRATOR`) and does not allow raw.githubusercontent.com downloads from the container. Therefore **an actual run of upstream ASTRA physics files inside Pyodide, including real network fetches/CORS/cache and mobile-device performance, has not been tested here**. The live GitHub Pages site is not modified. You must publish this version and perform the browser test described in `GITHUB_UPDATE_IT.md`.
+## Not fully tested here
 
-This implementation avoids the original `urllib.urlopen()` network timeout **by routing the client to the in-process ASTRA browser physics engine**, rather than by starting a server. The upstream source files must be reachable on first use; mirror availability can vary.
+1. Real Pyodide 314.0.7 downloads, importing every compiled scientific package on each mobile platform.
+2. Actual GPU/WebGL rendering and gestures on an Android/iOS device.
+3. SQLite persistence in actual browser IndexedDB across restarts; the standard-Python SQL example and the JavaScript worker protocol were checked separately.
+4. A full live ASTRA physics execution inside the public site, or third-party AI provider connectivity.
+5. Django backend, native ModernGL, Tkinter and PyFME: these are **not provided** in the browser-only version. Instead there are browser-specific examples, explicitly labelled as alternatives.
+
+## Reproduce checks
+
+```bash
+python3 -m unittest discover -s tests -v
+node --test tests/catalog.test.mjs tests/test_ast_sdk.cjs tests/test_ast_sdk_imports.cjs tests/test_browser_engine.cjs
+for f in app.js worker.js webviz.js catalog.js sw.js; do node --check "$f"; done
+```
+
+See `PAGES_CHECKLIST.md` for real-device acceptance tests before announcing the release.

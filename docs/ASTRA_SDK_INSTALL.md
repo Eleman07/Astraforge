@@ -1,6 +1,6 @@
 # ASTRA Simulator Client SDK 1.3.0 — Installation and Browser Integration
 
-## Use in AstraForge 4.3 (GitHub Pages)
+## Use in AstraForge 5.0 (GitHub Pages)
 
 **No separate Python server is needed.** The ASTRA wheel is included in `wheels/` and installed on demand through Pyodide's `micropip`. When user code accesses `AstraClient`, AstraForge loads the MIT-licensed ASTRA physics source (pinned to a tested upstream commit) into the same WebAssembly interpreter and routes the SDK calls directly to the `browser_bridge.route_raw()` dispatcher.
 

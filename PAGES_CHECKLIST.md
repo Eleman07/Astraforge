@@ -1,17 +1,16 @@
-# AstraForge 4.2 — GitHub Pages release checklist
+# AstraForge 5.0 — GitHub Pages deployment checklist
 
-1. Copy the root files `index.html`, `app.js`, `catalog.js`, `worker.js`, `style.css`, `sw.js`, `manifest.webmanifest`, `.nojekyll`, `README.md` and directories `icons/`, `docs/`, `tests/`, `wheels/` into the repository root on `main`.
-2. Verify Settings → Pages is enabled on `main / (root)` or the existing Pages workflow is active.
-3. Site URL: https://eleman07.github.io/Astraforge/ (case-sensitive path).
-4. Reload without cache (Ctrl+Shift+R) after updating: legacy service workers may still serve older JS until activation.
-5. In the browser, run `print(2 + 2)` and ensure `4` appears. Then import NumPy and Astropy (download on demand).
-6. Choose Aerospace and install the selected modules, including `wheels/astra_simulator_client-1.3.0-py3-none-any.whl`. Test `import astra; print(astra.__version__)` (expect `1.3.0`).
-7. Check distinct profiles: Biomedical → Biopython; Energy → CoolProp; Telecommunications → bitstring; AI → scikit-learn.
-8. Search all modules for `django`, `tkinter` or `pyfme`: labels must show Desktop / server and the install checkbox must be disabled.
-9. Verify local save/reload, file import/export, responsive mobile layout, and optional OpenRouter behavior with a disposable personal API key.
-10. Verify the JS console has no CDN, WebAssembly or CSP errors. If the download from `cdn.jsdelivr.net` is blocked, try a different network; do not assume Pyodide has been packaged into the small repository ZIP.
+1. Copy everything from this ZIP **into the root** of the public repository `Eleman07/Astraforge` (including `.nojekyll`, `examples/`, `astra-bridge/`, `wheels/`, and `astraforge_web.py`). Do not upload only the ZIP.
+2. Ensure GitHub Pages serves the `main` branch from `/(root)`, or use its existing static deployment workflow.
+3. Verify https://eleman07.github.io/Astraforge/ opens and loads the latest app, not the older service worker cache.
+4. Select **SQLite persistent database** → Create example → Run. Open **Database**, use `engineering.db`, run `SELECT * FROM experiments;`, then export its `.db` file.
+5. Select **3D / WebGL orbit** → Create example → Run. The WebGL viewport should display objects; drag on phone to rotate and pinch to zoom on smartphone and wheel zoom on desktop are supported.
+6. Select **Tkinter-style web UI** → Create example → Run. Observe browser-native controls, **not** a native Tkinter window.
+7. Select **Python Jinja2 page** → Create example → Run. Observe Python-rendered HTML, **not** a Django server.
+8. Select **Flight mechanics (browser)** → Create example → Run. This is an educational alternative, **not** the original PyFME package.
+9. Check ASTRA SDK `AstraClient()` demo still works through its browser bridge; first download requires access to the pinned upstream source.
+10. Confirm all profiles remain searchable and the Database group includes SQLite, SQLAlchemy, DuckDB and Peewee.
+11. Test on smartphone and desktop, including browser storage permissions and GPU limitations.
+12. Check the console, runtime download, module loading and any CSP issues. **First-run online access is needed**; do not assume every scientific package works fully offline.
 
-Technical references: https://pyodide.org/en/stable/usage/webworker.html and https://pyodide.org/en/stable/usage/packages-in-pyodide.html
-
-11. Select Aerospace and **Run** `import astra; print(astra.__version__)` without pressing Load selected packages. Expected: `1.3.0`.
-12. Run the same script again: it should not reinstall the wheel (until runtime reset).
+See `GITHUB_UPDATE_IT.md` for exact Git commands.

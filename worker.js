@@ -1,8 +1,8 @@
 /** AstraForge Python Web Worker (Pyodide 314 = module worker; no importScripts). */
-import {BROWSER_IDS,BUNDLED_IDS,PYODIDE_VERSION} from './catalog.js';
+import {BROWSER_IDS,BUNDLED_IDS,STDLIB_IDS,PYODIDE_VERSION} from './catalog.js';
 const CDN=`https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 const LOCAL_WHEELS={'astra-simulator-client':'./wheels/astra_simulator_client-1.3.0-py3-none-any.whl'};
-let runtime=null,bootPromise=null,astraEnginePromise=null,astraEngineReady=false;
+let runtime=null,bootPromise=null,astraEnginePromise=null,astraEngineReady=false,restoredDbs=false;
 const ASTRA_MANIFEST_URL=new URL('./astra-bridge/engine-manifest.json',self.location.href);
 const ASTRA_BRIDGE_URL=new URL('./astra-bridge/browser_client_bridge.py',self.location.href);
 const installed=new Set();
@@ -16,6 +16,10 @@ async function boot(id){
   const {loadPyodide}=await import(CDN+'pyodide.mjs');
   const instance=await loadPyodide({indexURL:CDN});
   instance.FS.mkdirTree('/home/pyodide/workspace');
+  const helper=await fetch(new URL('./astraforge_web.py',self.location.href));
+  if(!helper.ok)throw Error('Missing browser preview bridge');
+  instance.FS.writeFile('/home/pyodide/astraforge_web.py',await helper.text(),{encoding:'utf8'});
+  instance.runPython("import sys; sys.path.insert(0,'/home/pyodide')");
   instance.runPython("import os; os.environ['MPLBACKEND']='Agg'");
   runtime=instance;
   return instance;
@@ -24,18 +28,20 @@ async function boot(id){
  reply(id,'ready',{version:p.runPython('import sys; sys.version.split()[0]')});
  return p;
 }
-const safeFilename=name=>typeof name==='string' && /^[\w .-]{1,100}\.(py|txt|md|json)$/i.test(name) && !name.startsWith('.');
+const safeFilename=name=>typeof name==='string' && /^[\w .-]{1,100}\.(py|txt|md|json|html|css|js)$/i.test(name) && !name.startsWith('.');
 // Detect normal ASTRA imports even outside the Aerospace profile. The bundled
 // client is tiny, so install it lazily only when the code actually needs it.
 const importsAstra=source => /^\s*(?:import\s+astra(?:[\s,.]|$)|from\s+astra(?:[\s.]|$))/m.test(source)
  || /\b__import__\(\s*['"]astra['"]\s*\)/.test(source);
 async function loadPackages(id,names){
  const unique=[...new Set(names)].slice(0,85);
- const unsupported=unique.filter(x=>!BROWSER_IDS.has(x)&&!BUNDLED_IDS.has(x));
+ const unsupported=unique.filter(x=>!BROWSER_IDS.has(x)&&!BUNDLED_IDS.has(x)&&!STDLIB_IDS.has(x));
  if(unsupported.length)throw Error('Not available in the browser: '+unsupported.join(', '));
  const fresh=unique.filter(x=>!installed.has(x));
  for(const name of fresh){
-  if(BROWSER_IDS.has(name)){
+  if(STDLIB_IDS.has(name)){
+   reply(id,'progress',{text:'Ready: built-in '+name});
+  } else if(BROWSER_IDS.has(name)){
    reply(id,'progress',{text:'Loading '+name+'…'});
    await runtime.loadPackage(name);
   } else {
@@ -120,9 +126,53 @@ async function ensureAstraEngine(id){
  return astraEnginePromise;
 }
 
+
+// Database files stay inside the same-origin browser workspace. They are NOT
+// backed up to GitHub. Files >4 MiB are intentionally not persisted.
+const dbFilename = n => /^[A-Za-z0-9_-]{1,64}\.(db|sqlite|sqlite3)$/.test(n);
+function restoreDbs(data){
+ if(restoredDbs)return;
+ for(const [name,bytes] of Object.entries(data||{})){
+  if(!dbFilename(name))continue;
+  const binary=bytes instanceof Uint8Array?bytes:(Array.isArray(bytes)?new Uint8Array(bytes):null);
+  if(!binary||binary.length>4*1024*1024)continue;
+  runtime.FS.writeFile('/home/pyodide/workspace/'+name,binary);
+ }
+ restoredDbs=true;
+}
+function snapshotDbs(){
+ const dir='/home/pyodide/workspace';const output={};
+ for(const name of runtime.FS.readdir(dir)){
+  if(!dbFilename(name))continue;
+  const bytes=runtime.FS.readFile(dir+'/'+name);
+  if(bytes.length<=4*1024*1024)output[name]=bytes; // structured clone avoids JSON-sized copies
+ }
+ return output;
+}
+async function sqlQuery(data){
+ restoreDbs(data.dbFiles);
+ const name=dbFilename(data.database)?data.database:'engineering.db';
+ const query=String(data.query||'').trim();
+ if(query.length>20000)throw Error('SQL statement is too long');
+ runtime.globals.set('_af_query',query);runtime.globals.set('_af_database',name);
+ try {return JSON.parse(runtime.runPython(`import sqlite3,json,os
+_conn=sqlite3.connect('/home/pyodide/workspace/'+_af_database)
+try:
+    _cursor=_conn.execute(_af_query)
+    _columns=[d[0] for d in _cursor.description] if _cursor.description else []
+    _records=[list(row) for row in _cursor.fetchmany(200)] if _columns else []
+    _conn.commit()
+    _result=json.dumps({'columns':_columns,'rows':_records,'changes':_cursor.rowcount},default=str)
+finally:
+    _conn.close()
+_result`));}
+ finally{runtime.globals.delete('_af_query');runtime.globals.delete('_af_database')}
+}
+
 async function execute(id,data){
  const {files={},name}=data;
- if(!safeFilename(name)||typeof files[name]!=='string')throw Error('Invalid active Python file');
+ if(!safeFilename(name)||!name.endsWith('.py')||typeof files[name]!=='string')throw Error('Only .py files can run in Pyodide. Use Web UI for HTML.');
+ restoreDbs(data.dbFiles);
  for(const [filename,content] of Object.entries(files)){
   if(safeFilename(filename)&&typeof content==='string'&&content.length<=1048576)
    runtime.FS.writeFile('/home/pyodide/workspace/'+filename,content,{encoding:'utf8'});
@@ -131,6 +181,7 @@ async function execute(id,data){
  runtime.setStdout({batched:text=>reply(id,'output',{stream:'stdout',text})});
  runtime.setStderr({batched:text=>reply(id,'output',{stream:'stderr',text})});
  const code=files[name];
+ runtime.runPython('import astraforge_web; astraforge_web.take_previews()');
  // loadPackagesFromImports only recognizes Pyodide-distributed modules, not
  // our site-hosted ASTRA wheel. Do this before executing the user's imports.
  if(data.autoAstra===true || importsAstra(code)){
@@ -152,17 +203,19 @@ for _af_num in _plt.get_fignums()[:4]:
 _plt.close('all')
 _json.dumps(_af_plots)`));
  }
- return plots;
+ const previews=JSON.parse(runtime.runPython('import json, astraforge_web; json.dumps(astraforge_web.take_previews())'));
+ return {plots,...previews,dbFiles:snapshotDbs()};
 }
 async function handle({data}){
  const {id,type}=data;
  try{
   await boot(id);
   if(type==='packages'){const names=Array.isArray(data.packages)?data.packages:[];reply(id,'done',{packages:await loadPackages(id,names)});return;}
-  if(type==='exec'){reply(id,'done',{plots:await execute(id,data)});return;}
+  if(type==='exec'){reply(id,'done',await execute(id,data));return;}
+  if(type==='sql'){const result=await sqlQuery(data);reply(id,'done',{sql:result,dbFiles:snapshotDbs()});return;}
   if(type==='init'){reply(id,'done',{version:runtime.runPython('import sys; sys.version.split()[0]')});return;}
   throw Error('Unsupported operation');
- }catch(error){reply(id,'error',{error:String(error?.stack||error)});}
+ }catch(error){let dbFiles;try{if(runtime)dbFiles=snapshotDbs();}catch(_){}reply(id,'error',{error:String(error?.stack||error),dbFiles});}
 }
 // Serialize message handling to avoid simultaneous Pyodide FS/global manipulation.
 self.onmessage=e=>{queue=queue.then(()=>handle(e),()=>handle(e));};

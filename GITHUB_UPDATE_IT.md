@@ -1,71 +1,72 @@
-# Pubblicare AstraForge 4.3 su GitHub Pages (Ubuntu)
+# Tutorial: aggiornare AstraForge 5.0 su GitHub Pages
 
-Non serve alcun VPS e **non devi avviare `server.py`**: le chiamate di `AstraClient` vengono eseguite in Pyodide utilizzando il motore ASTRA locale al browser.
+Questo ZIP contiene **solo il sito statico**. Non serve installare un server, creare un VPS o configurare Docker.
 
-## 1. Scarica lo ZIP
+## 1) Prepara il progetto sul tuo Ubuntu
 
-Salva `astraforge-4.3-github-pages-astra-browser-engine.zip` in `~/Downloads`.
-
-## 2. Prepara la copia Git (una sola volta)
+Scarica `astraforge-5.0-browser-first-free.zip` nella cartella Downloads. Poi:
 
 ```bash
 cd ~
+# Solo se non hai ancora clonato il repository:
 if [ ! -d "$HOME/Astraforge/.git" ]; then
   git clone https://github.com/Eleman07/Astraforge.git "$HOME/Astraforge"
 fi
-cd "$HOME/Astraforge"
+cd ~/Astraforge
+git status
 git pull --ff-only origin main
 ```
 
-Se la directory esiste ma non è un repository, non eliminarla senza controllarne prima il contenuto.
+Se Git dice che hai modifiche locali non salvate, **non** usare `git reset --hard`. Fai prima una copia delle modifiche o committale.
 
-## 3. Estrai e copia correttamente i file
+## 2) Estrai l'aggiornamento
 
 ```bash
-mkdir -p "$HOME/Downloads/astraforge-4.3-update"
-unzip -o "$HOME/Downloads/astraforge-4.3-github-pages-astra-browser-engine.zip" \
-  -d "$HOME/Downloads/astraforge-4.3-update"
-rsync -av --exclude='.git/' \
-  "$HOME/Downloads/astraforge-4.3-update/" \
-  "$HOME/Astraforge/"
+mkdir -p ~/Downloads/astraforge-5-update
+unzip -o ~/Downloads/astraforge-5.0-browser-first-free.zip \
+  -d ~/Downloads/astraforge-5-update
 ```
 
-**Verifica che nel repository esistano** `worker.js`, `astra-bridge/engine-manifest.json`, `astra-bridge/browser_client_bridge.py`, `wheels/astra_simulator_client-1.3.0-py3-none-any.whl` e `index.html` nella root.
+## 3) Copia i nuovi file
 
-## 4. Test locali
+```bash
+rsync -av \
+  --exclude='__pycache__' \
+  ~/Downloads/astraforge-5-update/ \
+  ~/Astraforge/
+```
+
+Non usare `rsync --delete`, così non elimini involontariamente file del repository che non sono presenti nello ZIP.
+
+## 4) Verifica e pubblica
 
 ```bash
 cd ~/Astraforge
 node --check app.js
 node --check worker.js
-node tests/catalog.test.mjs
-node tests/test_browser_engine.cjs
-python3 -m unittest discover -s tests -p 'test_browser_bridge.py' -v
-```
-
-Se non hai Node.js, installalo da una fonte fidata prima dei test JavaScript.
-
-## 5. Pubblica
-
-```bash
-cd ~/Astraforge
+node --check webviz.js
+python3 -m unittest discover -s tests -v
 git status
+git diff --stat
 git add -A
-git commit -m "Integrate ASTRA simulator browser engine without HTTP server"
+git commit -m "AstraForge 5.0 browser-first WebGL and local SQL"
 git push origin main
 ```
 
-Se `git commit` mostra `nothing to commit`, non ci sono differenze da inviare.
+Se `git commit` mostra `nothing to commit`, controlla se hai copiato i file nella directory corretta. Se `node` non è disponibile, il controllo sintattico è opzionale, non indispensabile per GitHub Pages.
 
-## 6. Test online, decisivo
+## 5) Apri la pagina
 
-1. Apri https://github.com/Eleman07/Astraforge/actions e verifica che Pages sia verde.
-2. Apri https://eleman07.github.io/Astraforge/ e premi **Ctrl+Shift+R**.
-3. Seleziona **Aerospace engineering** → **Create ASTRA simulator example** → **Run**.
-4. Il primo run installerà il wheel SDK e scaricherà i file del motore dal repository ASTRA originale, fissato a uno specifico commit; verifica che appaia `ASTRA Browser Engine ready`.
-5. Controlla che siano stampati `ASTRA status` e i valori della simulazione.
-6. Ripremi **Run** per confermare che il motore rimane caricato. Provalo anche da telefono.
+- Controlla il deployment: <https://github.com/Eleman07/Astraforge/actions>
+- Apri l'IDE: <https://eleman07.github.io/Astraforge/>
+- Se vedi la vecchia versione: aggiorna con Ctrl+Shift+R oppure elimina i dati del Service Worker per quel sito.
 
-Se vedi ancora la vecchia versione: apri F12 → Application → Service Workers → Unregister per Astraforge, quindi ricarica. Se la prima esecuzione mostra un errore di rete relativo a raw.githubusercontent.com, prova con la rete attiva e controlla le richieste Network: il loader prevede un mirror jsDelivr.
+## 6) Prove funzionali consigliate
 
-Nota: **aprire l'ASTRA 3D Viewer** dalla barra dei toolkit apre una seconda simulazione indipendente, non sincronizzata con la sessione Python nell'IDE.
+- Scegli `SQLite persistent database`, premi Create example e poi Run; entra in Database e fai `SELECT * FROM experiments;`
+- Scegli `3D / WebGL orbit`, premi Run e verifica la vista 3D.
+- Scegli `Tkinter-style web UI`: si vede un'interfaccia web, **non** una vera finestra Tkinter.
+- Scegli `Python Jinja2 page`: si renderizza HTML prodotto da Python, **non** un server Django.
+- Scegli `Flight mechanics (browser)`: è una demo fisica autonoma, **non** il pacchetto PyFME.
+
+**Limiti importanti:** serve una connessione Internet al primo download di Pyodide/Three.js. I database SQLite sono locali al dispositivo e devono essere esportati per backup. Il JavaScript pubblicato su GitHub Pages è visibile ai visitatori.
