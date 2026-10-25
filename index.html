@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d18"><meta name="description" content="AstraForge · Python 3.14 engineering studio in your browser. No server-side execution.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' https://cdn.jsdelivr.net https://api.github.com https://raw.githubusercontent.com https://openrouter.ai; img-src 'self' data: blob:; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="apple-touch-icon" href="./icons/icon-192.png"><link rel="icon" href="./icons/logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./style.css">
+<title>AstraForge · Engineering Studio</title>
+</head>
+<body>
+<div class="shell">
+<header class="topbar">
+  <div class="brand"><div class="brand-icon">✧</div><div class="brandtext"><b>ASTRA<span>FORGE</span></b><small>ENGINEERING STUDIO <em>4.0</em></small></div></div>
+  <div class="topcent"><span class="pulse"></span> CLIENT-SIDE ENGINE</div>
+  <div class="topright"><span id="runtimeStatus" class="runtime status-loading">○ Python loading on demand</span><button id="btnSettings" class="topbutton" title="Settings">⚙</button><button id="btnSide" class="topbutton only-mobile" title="Projects">☰</button></div>
+</header>
+<section class="area">
+  <aside id="sidebar" class="sidebar">
+    <div class="section-kicker">WORKSPACE <button id="btnNew" aria-label="New file" title="New file">＋</button></div>
+    <div class="workspace-card"><span class="sym">◈</span><div><small>LOCAL WORKSPACE</small><strong>My engineering lab</strong></div><span class="small-dot"></span></div>
+    <nav id="files" aria-label="Project files" class="file-list"></nav>
+    <div class="actiongrid">
+      <button id="btnImport">↑ Import file</button><button id="btnExport">↓ Export file</button>
+      <input id="importInput" type="file" accept=".py,.txt,.json,.md" hidden>
+    </div>
+    <div class="divider"></div>
+    <div class="section-kicker">SCIENTIFIC TOOLKIT</div>
+    <label class="selectlabel" for="role">WHAT DO YOU STUDY / DO?</label>
+    <select id="role" class="field"><option value="aerospace">Aerospace engineering</option><option value="mechanical">Mechanical engineering</option><option value="computer">Computer science / AI</option><option value="electrical">Electronics / automation</option><option value="chemical">Chemistry / materials</option><option value="biomedical">Biomedical / life sciences</option><option value="math">Mathematics / physics</option><option value="general">General purpose Python</option></select>
+    <p id="profileSummary" class="hint"></p>
+    <div id="packages" class="package-list"></div>
+    <p class="hint">Aerospace includes ASTRA Simulator Client 1.3.0 (bundled pure-Python wheel). Click Load selected modules to install it. Import works in Pyodide; remote ASTRA HTTP calls require a compatible browser transport and an accessible server.</p>
+    <button id="btnInstall" class="outline-block">⬇ Load selected modules</button>
+    <div class="divider"></div>
+    <button id="btnGithub" class="subnav">⌘ &nbsp; Import public GitHub .py</button>
+    <div class="spacer"></div>
+    <div class="sidebar-bottom">LOCAL FIRST <span class="dotline">●</span> NO CLOUD EXECUTION<br><a href="https://elemanprojects.com" target="_blank" rel="noopener noreferrer">ASTROX PORTFOLIO ↗</a></div>
+  </aside>
+  <main class="workspace">
+    <div class="tabstrip"><div id="tabname" class="tab"><span>◇</span> main.py <i>●</i></div><div class="toolset"><button id="btnSave" title="Ctrl + S">▣ Save</button><button id="btnRun" class="run" title="Ctrl + Enter">▶ Run Python <span>⌃⏎</span></button><button id="btnStop" title="Reinitialize engine" class="mutedbutton">↻ Reset</button></div></div>
+    <div class="codearea"><div class="ruler"><div>01</div><div>02</div><div>03</div><div>04</div><div>05</div><div>06</div><div>07</div><div>08</div><div>09</div><div>10</div><div>11</div><div>12</div></div><textarea id="editor" spellcheck="false" aria-label="Python code editor" autocapitalize="off" autocomplete="off"></textarea></div>
+    <div class="bottom-title"><span><b>◉</b> OUTPUT</span><span id="runStatus">Ready to execute</span><button id="btnClear">Clear</button></div>
+    <div id="output" class="output" role="log" aria-live="polite"><span class="out-dim">AstraForge / local WebAssembly runtime. Press Run Python to begin.</span></div>
+    <div id="plotZone" class="plots" aria-label="Plots from Matplotlib"></div>
+    <div class="statusbar"><span>✦ ASTRAFORGE / PWA</span><span id="fileStatus">main.py · saved locally</span><span class="status-end">PYTHON 3.14 · WEBASSEMBLY · <span id="connection">ONLINE</span></span></div>
+  </main>
+  <aside id="rightbar" class="rightbar">
+    <div class="intel-head"><span class="intel-icon">✦</span><div><strong>ASTRA INTELLIGENCE</strong><small>OPTIONAL OPENROUTER COPILOT</small></div></div>
+    <div class="rightintro"><span class="pill">ENGINEERING COPILOT</span><h1>From theory<br>to <em>simulation.</em></h1><p>Design, test and reason through complex systems. Python runs entirely on your device.</p></div>
+    <div class="intel-settings"><label for="aiModel">OPENROUTER MODEL ID</label><input id="aiModel" value="openrouter/free" placeholder="provider/model:free" spellcheck="false"><label for="aiKey">PERSONAL API KEY (NOT SAVED)</label><input id="aiKey" type="password" placeholder="sk-or-…" autocomplete="off"><small>Use a restricted, disposable key. Never put a shared key in frontend code.</small></div>
+    <div id="aiMessages" class="aimessages"><div class="aihelp">✧ Ask about orbital dynamics, NumPy, code architecture, or request a Python example. Your prompt and current file are sent to OpenRouter <b>only when you click Ask</b>.</div></div>
+    <div class="ai-compose"><textarea id="aiPrompt" rows="3" placeholder="Explain this code or build an RK4 integrator…"></textarea><div class="row-between"><small>Personal key · Optional</small><button id="btnAsk">Ask AI ↗</button></div></div>
+  </aside>
+</section>
+</div>
+<dialog id="settingsDialog"><div class="dialog-header"><div><small>ASTRAFORGE CONFIGURATION</small><h2>Preferences</h2></div><button id="closeSettings">✕</button></div><div class="dialog-body"><h3>Keyboard shortcuts</h3><p><code>Ctrl / ⌘ + Enter</code> Run Python</p><p><code>Ctrl / ⌘ + S</code> Save locally</p><p><code>Ctrl / ⌘ + K</code> Focus editor</p><h3>Execution model</h3><p>WebAssembly interpreter on your device. No remote terminal, accounts or server-side package installation. STEM packages download on demand and need compatible Pyodide builds.</p><h3>Privacy</h3><p>Workspace files are stored in this browser's IndexedDB. Download important work periodically. AI keys are kept only in memory until the page closes. AI requests explicitly send the prompt and current code to your chosen provider.</p></div></dialog>
+<dialog id="githubDialog"><div class="dialog-header"><div><small>PUBLIC CODE DISCOVERY</small><h2>Import Python file</h2></div><button id="closeGithub">✕</button></div><div class="dialog-body"><p>Paste a GitHub public repository raw Python file URL, for example:<br><code>https://raw.githubusercontent.com/owner/repo/main/example.py</code></p><input id="rawUrl" class="field" type="url" placeholder="https://raw.githubusercontent.com/…"><p class="hint">Public files only. Respect their license and attribution. Private repositories and full git clone require additional integration.</p><button id="importRaw" class="full-action">Import file</button></div></dialog>
+<div id="toast" role="status" class="toast" aria-live="polite"></div>
+<script type="module" src="./app.js"></script>
+</body></html>
