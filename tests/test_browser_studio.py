@@ -35,7 +35,7 @@ class PythonBridgeTests(unittest.TestCase):
     def test_gui_example(self):
         exec((ROOT/'examples/ui.py').read_text(),{})
         result=self.web.take_previews()
-        self.assertEqual(result['ui']['controls'][-1]['type'],'button')
+        self.assertTrue(any(c['type']=='button' and c.get('on_click')=='orbit' for c in result['ui']['controls']))
     def test_flight_example(self):
         exec((ROOT/'examples/flight.py').read_text(),{})
         result=self.web.take_previews()
@@ -47,7 +47,7 @@ class PythonBridgeTests(unittest.TestCase):
             try:
                 exec((ROOT/'examples/database.py').read_text(),{})
                 with sqlite3.connect('engineering.db') as conn:
-                    self.assertEqual(conn.execute('SELECT COUNT(*) FROM experiments').fetchone()[0],1)
+                    self.assertEqual(conn.execute('SELECT COUNT(*) FROM experiments').fetchone()[0],3)
             finally:os.chdir(old)
     def test_scene_input_validation(self):
         with self.assertRaises(ValueError):self.web.show_scene([{'type':'arbitrary'}])

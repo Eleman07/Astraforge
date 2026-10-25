@@ -40,5 +40,5 @@ class StaticTests(unittest.TestCase):
         self.assertIn('https://raw.githubusercontent.com',self.html)
         self.assertIn('https://cdn.jsdelivr.net',self.html)
         self.assertIn("new Worker('./worker.js',{type:'module'",self.app)
-        self.assertIn('astraforge-ghpages-v7-browser-simulator',self.sw)
+        self.assertIn('astraforge-ghpages-v8-interactive-studio',self.sw)
 if __name__=='__main__':unittest.main()

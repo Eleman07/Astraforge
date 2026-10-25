@@ -16,9 +16,11 @@ async function boot(id){
   const {loadPyodide}=await import(CDN+'pyodide.mjs');
   const instance=await loadPyodide({indexURL:CDN});
   instance.FS.mkdirTree('/home/pyodide/workspace');
-  const helper=await fetch(new URL('./astraforge_web.py',self.location.href));
-  if(!helper.ok)throw Error('Missing browser preview bridge');
-  instance.FS.writeFile('/home/pyodide/astraforge_web.py',await helper.text(),{encoding:'utf8'});
+  for (const helperName of ['astraforge_web.py','astraforge_db.py']){
+   const helper=await fetch(new URL('./'+helperName,self.location.href));
+   if(!helper.ok)throw Error('Missing Python browser module: '+helperName);
+   instance.FS.writeFile('/home/pyodide/'+helperName,await helper.text(),{encoding:'utf8'});
+  }
   instance.runPython("import sys; sys.path.insert(0,'/home/pyodide')");
   instance.runPython("import os; os.environ['MPLBACKEND']='Agg'");
   runtime=instance;
@@ -181,7 +183,7 @@ async function execute(id,data){
  runtime.setStdout({batched:text=>reply(id,'output',{stream:'stdout',text})});
  runtime.setStderr({batched:text=>reply(id,'output',{stream:'stderr',text})});
  const code=files[name];
- runtime.runPython('import astraforge_web; astraforge_web.take_previews()');
+ runtime.runPython('import astraforge_web; astraforge_web.reset_handlers()');
  // loadPackagesFromImports only recognizes Pyodide-distributed modules, not
  // our site-hosted ASTRA wheel. Do this before executing the user's imports.
  if(data.autoAstra===true || importsAstra(code)){
@@ -206,6 +208,33 @@ _json.dumps(_af_plots)`));
  const previews=JSON.parse(runtime.runPython('import json, astraforge_web; json.dumps(astraforge_web.take_previews())'));
  return {plots,...previews,dbFiles:snapshotDbs()};
 }
+async function dispatchUI(id,data){
+ const action=String(data.event||'');
+ if(!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(action))throw Error('Invalid UI action');
+ runtime.globals.set('_af_ui_event',action);
+ runtime.globals.set('_af_ui_values',JSON.stringify(data.values||{}));
+ runtime.globals.set('_af_ui_target',String(data.target||'').slice(0,64));
+ try {
+  await runtime.runPythonAsync(`import json, astraforge_web
+astraforge_web.dispatch(_af_ui_event, json.loads(_af_ui_values), target=_af_ui_target)`);
+  return JSON.parse(runtime.runPython('import json, astraforge_web; json.dumps(astraforge_web.take_previews())'));
+ } finally {
+  for(const key of ['_af_ui_event','_af_ui_values','_af_ui_target'])runtime.globals.delete(key);
+ }
+}
+async function browseDB(id,data){
+ restoreDbs(data.dbFiles);
+ const filename=dbFilename(data.database)?data.database:'engineering.db';
+ runtime.globals.set('_af_db_filename',filename);
+ runtime.globals.set('_af_db_request',JSON.stringify(data.command||{action:'tables'}));
+ try{
+  const result=JSON.parse(runtime.runPython(`import astraforge_db, json
+json.dumps(astraforge_db.perform(_af_db_filename,json.loads(_af_db_request)), default=str)`));
+  return {db:result,dbFiles:snapshotDbs()};
+ }finally{
+  runtime.globals.delete('_af_db_filename');runtime.globals.delete('_af_db_request');
+ }
+}
 async function handle({data}){
  const {id,type}=data;
  try{
@@ -213,6 +242,9 @@ async function handle({data}){
   if(type==='packages'){const names=Array.isArray(data.packages)?data.packages:[];reply(id,'done',{packages:await loadPackages(id,names)});return;}
   if(type==='exec'){reply(id,'done',await execute(id,data));return;}
   if(type==='sql'){const result=await sqlQuery(data);reply(id,'done',{sql:result,dbFiles:snapshotDbs()});return;}
+  if(type==='ui_event'){const result=await dispatchUI(id,data);reply(id,'done',{...result,dbFiles:snapshotDbs()});return;}
+  if(type==='db'){reply(id,'done',await browseDB(id,data));return;}
+  if(type==='db_import'){const filename=data.name;const bytes=data.bytes;if(!dbFilename(filename)||!(bytes instanceof Uint8Array)||bytes.length>4*1024*1024)throw Error('Invalid SQLite import');runtime.FS.writeFile('/home/pyodide/workspace/'+filename,bytes);reply(id,'done',{dbFiles:snapshotDbs()});return;}
   if(type==='init'){reply(id,'done',{version:runtime.runPython('import sys; sys.version.split()[0]')});return;}
   throw Error('Unsupported operation');
  }catch(error){let dbFiles;try{if(runtime)dbFiles=snapshotDbs();}catch(_){}reply(id,'error',{error:String(error?.stack||error),dbFiles});}

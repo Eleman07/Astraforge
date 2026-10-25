@@ -34,7 +34,7 @@ let pyWorker=null,running=false,nextId=1,toastTimer=null,deadline=null;
 const pending=new Map();
 const installed=new Set();
 const selectedByProfile={};
-let showAll=false,dbPromise=null,dbFiles={},currentStudio='output',lastScene=null;
+let showAll=false,dbPromise=null,dbFiles={},currentStudio='output',lastScene=null,activeUI=null,dbGridTable='';
 
 const EXAMPLES=Object.freeze({
  scene:['scene.py','scene'],flight:['flight.py','flight'],
@@ -63,6 +63,7 @@ function setStudio(name){
  for(const [id,tab] of [['scenePanel','scene'],['webPanel','web'],['databasePanel','database']])$(id).hidden=name!==tab;
  $('consoleExpanded').classList.toggle('preview-expanded',name!=='output');
  if(name==='scene')void import('./webviz.js').then(m=>m.resizeScene()).catch(()=>{});
+ if(name==='database')void refreshTables();
 }
 function previewHtml(){
  if(!active.endsWith('.html'))return;
@@ -70,29 +71,143 @@ function previewHtml(){
  $('htmlPreview').srcdoc=$('editor').value;
  setStudio('web');
 }
+function browserValues(){
+ const result={};
+ for(const input of $('declarativePreview').querySelectorAll('[data-control-id]')){
+  result[input.dataset.controlId]=input.type==='checkbox'?input.checked:input.type==='range'?Number(input.value):input.value;
+ }
+ return result;
+}
+async function triggerPythonEvent(event,target,values={}){
+ if(running){toast('Python is busy');return;}
+ updateBusy(true);
+ try{
+  const result=await send('ui_event',{event,target,values:{...browserValues(),...values}});
+  await onWorkerResult(result);
+ }catch(error){log('\nPython callback: '+error.message+'\n',true);toast('Callback failed — see Output');}
+ finally{updateBusy(false)}
+}
 function renderBrowserUI(data){
  if(!data?.controls)return;
+ activeUI=data;
  $('htmlPreview').hidden=true;
  const host=$('declarativePreview');host.replaceChildren();
- const heading=document.createElement('h3');heading.textContent=data.title||'Browser form';host.append(heading);
- for(const item of data.controls.slice(0,40)){
-  const row=document.createElement('label');row.className='web-field';
-  if(item.type==='label'){row.textContent=item.text;host.append(row);continue;}
+ const heading=document.createElement('h3');heading.textContent=data.title||'Interactive Python UI';host.append(heading);
+ for(const item of data.controls.slice(0,60)){
+  if(item.type==='label'){
+   const label=document.createElement('p');label.className='web-text';label.textContent=item.text;host.append(label);continue;
+  }
   if(item.type==='button'){
    const button=document.createElement('button');button.textContent=item.text;button.type='button';
-   button.onclick=()=>toast('Preview interaction only · no Python/Tkinter callback');host.append(button);continue;
+   button.onclick=()=>item.on_click?void triggerPythonEvent(item.on_click,item.id):toast('No on_click callback registered');
+   host.append(button);continue;
   }
+  const row=document.createElement('label');row.className='web-field';
   const caption=document.createElement('span');caption.textContent=item.text;
-  const input=document.createElement('input');input.type=item.type==='checkbox'?'checkbox':'text';
-  if(item.type!=='checkbox')input.value=item.value||'';
+  const input=item.type==='textarea'?document.createElement('textarea'):item.type==='select'?document.createElement('select'):item.type==='progress'?document.createElement('progress'):document.createElement('input');
+  input.dataset.controlId=item.id;
+  if(item.type==='checkbox'){input.type='checkbox';input.checked=Boolean(item.value)}
+  else if(item.type==='slider'||item.type==='progress'){
+   if(item.type==='slider')input.type='range';input.min=String(item.min??0);input.max=String(item.max??100);input.value=String(item.value??0);
+  }else if(item.type==='select'){
+   for(const option of item.options||[]){const opt=document.createElement('option');opt.value=option;opt.textContent=option;input.append(opt)}input.value=String(item.value||'');
+  }else{if(item.tagName!=='TEXTAREA')input.type='text';input.value=String(item.value??'')}
+  if(item.on_change){input.addEventListener('change',()=>void triggerPythonEvent(item.on_change,item.id));}
   row.append(caption,input);host.append(row);
  }
  setStudio('web');
 }
+async function refreshTables(){
+ if(running)return;
+ try{
+  const response=await send('db',{database:$('databaseName').value.trim(),command:{action:'tables'},dbFiles});
+  await persistDatabases(response);
+  const select=$('dbTableSelect'),previous=select.value;select.replaceChildren();
+  for(const name of response.db.tables||[]){const opt=document.createElement('option');opt.value=name;opt.textContent=name;select.append(opt)}
+  if((response.db.tables||[]).includes(previous))select.value=previous;
+  if(select.value){await browseTable(select.value)}
+  else {$('dbGrid').replaceChildren();$('dbGridStatus').textContent='No tables yet. Use New table or SQL.'}
+ }catch(e){$('dbGridStatus').textContent=e.message}
+}
+async function persistDatabases(result){
+ if(result.dbFiles){dbFiles=result.dbFiles;try{await storageSet('local-databases',dbFiles)}catch(e){toast('Database save failed: '+e.message)}}
+}
+async function dbAction(command){
+ if(running)return null;
+ updateBusy(true);
+ try{
+  const result=await send('db',{database:$('databaseName').value.trim(),command,dbFiles});
+  await persistDatabases(result);
+  return result.db;
+ }catch(e){$('dbGridStatus').textContent=e.message;log('\nSQLite: '+e.message+'\n',true);return null}
+ finally{updateBusy(false)}
+}
+async function browseTable(table){
+ // Do not enter the busy state twice: refreshTables is allowed to call browseTable.
+ const info=await dbAction({action:'browse',table});
+ if(info)renderDBGrid(info);
+}
+function renderDBGrid(info){
+ dbGridTable=info.table;
+ const host=$('dbGrid');host.replaceChildren();
+ const table=document.createElement('table');table.className='sql-grid';
+ const head=document.createElement('thead'),header=document.createElement('tr');
+ for(const col of info.columns||[]){const th=document.createElement('th');th.textContent=col;header.append(th)}
+ if(info.editable){const th=document.createElement('th');th.textContent='Actions';header.append(th)}
+ head.append(header);table.append(head);
+ const body=document.createElement('tbody');
+ for(const row of info.rows||[]){
+  const tr=document.createElement('tr'),edits={};
+  for(let i=0;i<info.columns.length;i++){
+   const key=info.columns[i],td=document.createElement('td');
+   if(key==='__af_rowid'||!info.editable){td.textContent=row[i]===null?'NULL':String(row[i])}
+   else {const input=document.createElement('input');input.className='cell-editor';input.value=row[i]===null?'':String(row[i]);input.setAttribute('aria-label',key);td.append(input);edits[key]=input}
+   tr.append(td);
+  }
+  if(info.editable){
+   const actions=document.createElement('td');actions.className='db-row-actions';
+   const save=document.createElement('button');save.textContent='Save';save.type='button';
+   const del=document.createElement('button');del.textContent='Delete';del.type='button';
+   save.onclick=async()=>{
+    const values=Object.fromEntries(Object.entries(edits).map(([k,x])=>[k,x.value]));
+    const updated=await dbAction({action:'update',table:info.table,rowid:Number(row[0]),values});
+    if(updated)renderDBGrid(updated);
+   };
+   del.onclick=async()=>{
+    if(!window.confirm('Delete this database row?'))return;
+    const updated=await dbAction({action:'delete',table:info.table,rowid:Number(row[0])});
+    if(updated)renderDBGrid(updated);
+   };
+   actions.append(save,del);tr.append(actions);
+  }
+  body.append(tr);
+ }
+ table.append(body);host.append(table);
+ $('dbGridStatus').textContent=`${info.table} · ${info.rows?.length||0} rows · ${info.editable?'Editable rows':'Read-only (WITHOUT ROWID)'}`;
+}
+async function addDatabaseRow(){
+ const name=$('dbTableSelect').value;if(!name){toast('Select a table first');return}
+ const info=await dbAction({action:'browse',table:name});if(!info)return;
+ const values={};
+ for(const column of info.schema){
+  const raw=window.prompt(`New row: ${column.name} (${column.type}) — leave blank for default/NULL`,'');
+  if(raw===null)return;
+  if(raw!=='')values[column.name]=raw;
+ }
+ if(!Object.keys(values).length){toast('Enter at least one value');return}
+ const updated=await dbAction({action:'insert',table:name,values});if(updated)renderDBGrid(updated);
+}
+async function createDatabaseTable(){
+ const name=window.prompt('New table name (letters/numbers/underscores)','experiments');if(name===null)return;
+ const spec=window.prompt('Columns separated by comma; e.g. experiment TEXT, score REAL','experiment TEXT, score REAL');if(spec===null)return;
+ const columns=spec.split(',').map(s=>s.trim().split(/\s+/)).filter(x=>x.length>0).map(([name,type='TEXT'])=>({name,type:type.toUpperCase()}));
+ const result=await dbAction({action:'create',table:name,columns});
+ if(result){await refreshTables();$('dbTableSelect').value=name;await browseTable(name)}
+}
 async function onWorkerResult(result){
- if(result.dbFiles){dbFiles=result.dbFiles;try{await storageSet('local-databases',dbFiles);}catch(error){log('\nDatabase is not persisted: '+error.message+'\n',true);}}
+ await persistDatabases(result);
  if(result.scene){lastScene=result.scene;setStudio('scene');
-  try{const module=await import('./webviz.js');await module.renderScene($('sceneViewport'),result.scene);$('sceneTitle').textContent=result.scene.title||'3D scene';}
+  try{const module=await import('./webviz.js');await module.renderScene($('sceneViewport'),result.scene,{onPick:(action,id)=>triggerPythonEvent(action,id)});$('sceneTitle').textContent=result.scene.title||'3D scene';}
   catch(error){$('sceneTitle').textContent='WebGL unavailable: '+error.message;log('\n3D preview error: '+error.message+'\n',true);}
  }
  if(result.ui)renderBrowserUI(result.ui);
@@ -113,7 +228,7 @@ async function runSQL(){
   for(const values of result.sql.rows||[]){const tr=document.createElement('tr');for(const v of values){const td=document.createElement('td');td.textContent=v===null?'NULL':String(v);tr.append(td)}body.append(tr)}
   $('sqlStatus').textContent='SQL succeeded · '+(result.sql.rows||[]).length+' rows shown (max 200) · saved locally';
  }catch(error){$('sqlStatus').textContent=error.message;log('\nSQL: '+error.message+'\n',true);}
- finally{updateBusy(false)}
+ finally{updateBusy(false);if(currentStudio==='database')void refreshTables()}
 }
 
 function db(){if(!dbPromise)dbPromise=new Promise((resolve,reject)=>{const req=indexedDB.open('astraforge-pwa-workspace',1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('data'))req.result.createObjectStore('data');};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});return dbPromise;}
@@ -177,7 +292,7 @@ async function runCode(){
    img.src='data:image/png;base64,'+base64;$('plotZone').append(img);
   }
   await onWorkerResult(result);
-  if(!result.scene&&!result.ui)setStudio('output');
+  if(!result.scene&&!result.ui&&!result.html)setStudio('output');
   log('\nCompleted in '+((performance.now()-start)/1000).toFixed(2)+' s\n');
  }catch(error){setStudio('output');log('\n'+error.message+'\n',true);}
  finally{clearTimeout(deadline);updateBusy(false);}
@@ -196,6 +311,10 @@ async function init(){for(const [key,p] of Object.entries(PROFILES)){const o=doc
  $('editor').addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const a=e.target.selectionStart,b=e.target.selectionEnd;e.target.setRangeText('    ',a,b,'end');e.target.dispatchEvent(new Event('input',{bubbles:true}));}});
  $('btnSave').onclick=()=>{void saveFiles();toast('Saved locally');};$('btnRun').onclick=()=>void runCode();$('btnStop').onclick=()=>stopEngine();$('btnInstall').onclick=()=>void installPackages();$('btnClear').onclick=()=>$('output').replaceChildren();
  $('btnCreateExample').onclick=()=>void createExample();$('btnRunSQL').onclick=()=>void runSQL();
+ $('btnRefreshTables').onclick=()=>void refreshTables();
+ $('dbTableSelect').onchange=()=>void browseTable($('dbTableSelect').value);
+ $('btnCreateTable').onclick=()=>void createDatabaseTable();
+ $('btnAddRow').onclick=()=>void addDatabaseRow();
  $('btnExportDB').onclick=()=>{
   const filename=$('databaseName').value.trim();const bytes=dbFiles[filename];
   if(!bytes){toast('No saved database with this name');return;}
@@ -207,7 +326,7 @@ async function init(){for(const [key,p] of Object.entries(PROFILES)){const o=doc
   const file=e.target.files[0];if(!file)return;
   if(!/^[\w-]{1,64}\.(db|sqlite|sqlite3)$/.test(file.name)||file.size>4*1024*1024){toast('Choose a .db file under 4 MiB');return;}
   const bytes=new Uint8Array(await file.arrayBuffer());dbFiles[file.name]=bytes;
-  try{await storageSet('local-databases',dbFiles);$('databaseName').value=file.name;toast('Database imported; reset Python runtime to refresh in-memory files');}
+  try{await storageSet('local-databases',dbFiles);await send('db_import',{name:file.name,bytes});$('databaseName').value=file.name;toast('Database imported and ready');await refreshTables();}
   catch(error){toast('Import failed: '+error.message)}e.target.value='';
  };
  for(const button of document.querySelectorAll('[data-studio]'))button.onclick=()=>setStudio(button.dataset.studio);

@@ -10,7 +10,7 @@ const swSource=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 assert.match(workerSource,/pyodide\.mjs/);
 assert.doesNotMatch(workerSource,/importScripts\(/);
 assert.match(appSource,/new Worker\('\.\/worker\.js',\{type:'module'/);
-assert.match(swSource,/astraforge-ghpages-v7-browser-simulator/);
+assert.match(swSource,/astraforge-ghpages-v8-interactive-studio/);
 assert.match(swSource,/astra_simulator_client-1\.3\.0-py3-none-any\.whl/);
 assert.ok(fs.existsSync(path.join(root,'wheels','astra_simulator_client-1.3.0-py3-none-any.whl')));
 const log=[],globals=new Map(),calls=[],outputs=[];

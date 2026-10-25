@@ -1,10 +1,10 @@
-# Tutorial: aggiornare AstraForge 5.0 su GitHub Pages
+# Tutorial: aggiornare AstraForge 5.1 su GitHub Pages
 
 Questo ZIP contiene **solo il sito statico**. Non serve installare un server, creare un VPS o configurare Docker.
 
 ## 1) Prepara il progetto sul tuo Ubuntu
 
-Scarica `astraforge-5.0-browser-first-free.zip` nella cartella Downloads. Poi:
+Scarica `astraforge-5.1-interactive-studio.zip` nella cartella Downloads. Poi:
 
 ```bash
 cd ~
@@ -22,9 +22,9 @@ Se Git dice che hai modifiche locali non salvate, **non** usare `git reset --har
 ## 2) Estrai l'aggiornamento
 
 ```bash
-mkdir -p ~/Downloads/astraforge-5-update
-unzip -o ~/Downloads/astraforge-5.0-browser-first-free.zip \
-  -d ~/Downloads/astraforge-5-update
+mkdir -p ~/Downloads/astraforge-5.1-update
+unzip -o ~/Downloads/astraforge-5.1-interactive-studio.zip \
+  -d ~/Downloads/astraforge-5.1-update
 ```
 
 ## 3) Copia i nuovi file
@@ -32,7 +32,7 @@ unzip -o ~/Downloads/astraforge-5.0-browser-first-free.zip \
 ```bash
 rsync -av \
   --exclude='__pycache__' \
-  ~/Downloads/astraforge-5-update/ \
+  ~/Downloads/astraforge-5.1-update/ \
   ~/Astraforge/
 ```
 
@@ -45,11 +45,12 @@ cd ~/Astraforge
 node --check app.js
 node --check worker.js
 node --check webviz.js
+node --check sw.js
 python3 -m unittest discover -s tests -v
 git status
 git diff --stat
 git add -A
-git commit -m "AstraForge 5.0 browser-first WebGL and local SQL"
+git commit -m "AstraForge 5.1 browser-first WebGL and local SQL"
 git push origin main
 ```
 
@@ -70,3 +71,11 @@ Se `git commit` mostra `nothing to commit`, controlla se hai copiato i file nell
 - Scegli `Flight mechanics (browser)`: è una demo fisica autonoma, **non** il pacchetto PyFME.
 
 **Limiti importanti:** serve una connessione Internet al primo download di Pyodide/Three.js. I database SQLite sono locali al dispositivo e devono essere esportati per backup. Il JavaScript pubblicato su GitHub Pages è visibile ai visitatori.
+
+## 7) Prova le nuove funzioni
+
+1. Browser examples → **Tkinter-style web UI** → Create example → Run → Web UI → cambia altitude e premi Calculate orbit. La callback gira in Pyodide, non su un server.
+2. **3D / WebGL orbit** → Create example → Run → Play → seleziona il satellite con mouse o tocco. La callback Python ne cambia il colore.
+3. **SQLite persistent database** → Create example → Run → Database → Refresh → seleziona experiments → Add row / Save / Delete. Esporta `engineering.db` per il backup.
+
+Limiti: ModernGL e Tkinter originali non vengono eseguiti nativamente nel browser. Sono API web alternative. DB locali per dispositivo, massimo 4 MiB per file; non è previsto un server SQL.

@@ -35,3 +35,27 @@
 .example-picker select{width:100%;background:#27343f;border:1px solid #425061;color:#dee7ef;padding:8px;border-radius:5px;font-size:11px}
 .example-picker button{padding:9px;border-radius:5px}
 @media(max-width:650px){.console-section.preview-expanded{flex-basis:55%;max-height:70%}.studio-tab{padding:9px 6px;font-size:10px}.console-subtitle{display:none}.sql-tools{gap:5px}.example-picker{padding:6px 10px}}
+
+/* AstraForge 5.1: interactive Web UI, animation player and database explorer */
+.af-scene-playback{display:flex;align-items:center;gap:9px;padding:6px 11px;min-height:42px;background:#222d38;border-top:1px solid #384859;color:#bfcfdd;font-size:11px}
+.af-scene-playback button,.db-browser-bar button,.db-row-actions button{background:#314353;border:1px solid #526479;color:#d9e9f8;border-radius:5px;padding:5px 8px;cursor:pointer;font-size:11px}
+.af-scene-playback input{flex:1;min-width:60px;accent-color:#8ac3fc}
+.web-field{align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.web-field>span{flex:0 1 42%;min-width:95px}
+.web-field>input,.web-field>textarea,.web-field>select,.web-field>progress{min-width:120px;max-width:100%;flex:1;background:#303c47;border:1px solid #536270;border-radius:5px;padding:7px;color:#eff5fc}
+.web-field input[type="checkbox"]{flex:0 0 auto;width:20px;height:20px;margin-right:auto}
+.web-field input[type="range"]{accent-color:#8ac3fc}
+.web-field progress{padding:0;height:20px}
+.web-text{font-size:12px;color:#b5c6d6;line-height:1.5}
+.db-browser{margin:7px 11px 10px;border:1px solid #394b5b;border-radius:6px;overflow:hidden;background:#1b242e}
+.db-browser-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px;background:#23313e}
+.db-browser-bar strong{font-size:11px;font-weight:600;margin-right:auto;color:#e1e9f1}
+.db-browser-bar select{background:#172533;border:1px solid #475c6c;color:#d6e6f5;border-radius:5px;padding:5px;min-width:100px;max-width:150px}
+.db-grid-scroll{overflow:auto;max-height:180px}
+.sql-grid{border-collapse:collapse;width:100%;font-size:11px;color:#d9e4ed}
+.sql-grid th,.sql-grid td{border-bottom:1px solid #304455;border-right:1px solid #304455;padding:5px 7px;text-align:left;white-space:nowrap}
+.sql-grid th{background:#273747;position:sticky;top:0}
+.sql-grid input.cell-editor{width:110px;max-width:150px;background:#162431;color:#dbe8f3;border:1px solid #405b74;border-radius:4px;padding:6px;font:inherit}
+.db-row-actions{display:flex;gap:4px}
+#dbGridStatus{display:block;color:#a0b1c1;font-size:10px;padding:7px 9px}
+@media(max-width:650px){.db-browser-bar{gap:4px}.db-browser-bar strong{width:100%}.af-scene-playback{gap:5px}.web-field>span{width:100%;flex:1 0 100%}.web-field>input,.web-field>textarea,.web-field>select{width:100%}}

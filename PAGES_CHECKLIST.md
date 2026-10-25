@@ -1,4 +1,4 @@
-# AstraForge 5.0 — GitHub Pages deployment checklist
+# AstraForge 5.1 — GitHub Pages deployment checklist
 
 1. Copy everything from this ZIP **into the root** of the public repository `Eleman07/Astraforge` (including `.nojekyll`, `examples/`, `astra-bridge/`, `wheels/`, and `astraforge_web.py`). Do not upload only the ZIP.
 2. Ensure GitHub Pages serves the `main` branch from `/(root)`, or use its existing static deployment workflow.
@@ -14,3 +14,10 @@
 12. Check the console, runtime download, module loading and any CSP issues. **First-run online access is needed**; do not assume every scientific package works fully offline.
 
 See `GITHUB_UPDATE_IT.md` for exact Git commands.
+
+### New in 5.1
+
+- [ ] Open Tkinter-style web UI, Run, change altitude and press **Calculate orbit**. The Python-computed velocity/period must change live. Checkbox state should persist after an event.
+- [ ] Open 3D / WebGL orbit, Run and press Play; drag or pinch to move camera. Tap/click the satellite and verify its color changes through a Python callback.
+- [ ] Open SQLite demo, Run, Database → Refresh → select experiments → Add row; change a score → Save → Delete row. Reload the page to check IndexedDB persistence, and export the database as backup.
+- [ ] Clear the PWA cache if v5.0 code continues appearing; release cache ID is now `v8-interactive-studio`.

@@ -38,7 +38,7 @@ const virtual={
 function response(body){return {ok:true,text:async()=>body,json:async()=>JSON.parse(body),clone(){return response(body)}}}
 const fakeFetch=async url=>{
  const u=url.toString();
- if(u.endsWith('/astraforge_web.py'))return response('# test preview bridge');
+ if(u.endsWith('/astraforge_web.py')||u.endsWith('/astraforge_db.py'))return response('# test Python browser bridge');
  if(u.endsWith('/engine-manifest.json'))return response(JSON.stringify(manifest));
  if(u.endsWith('/browser_client_bridge.py'))return response(bridge);
  if(manifest.files.some(p=>u.endsWith('/'+p))){upstreamLoads++;return response('# downloaded pinned ASTRA simulator source\n')}
