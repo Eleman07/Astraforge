@@ -1,60 +1,60 @@
-"""Regression tests for AstraForge's new user-selected Holst palette."""
+"""AstraForge palette regression: this historical filename is retained so updates overwrite old tests.
+The active theme is Observatory Azure as of v5.4; Holst is no longer active.
+"""
 from pathlib import Path
-import json,re
+import json
+import re
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
-COLORS = ('#0D1B2A', '#1B263B', '#415A77', '#778D7A', '#D4C4A8', '#F4F1DE')
+ROOT=Path(__file__).resolve().parents[1]
 
+def contrast(a,b):
+    def luminance(c):
+        rgb=[int(c[x:x+2],16)/255 for x in (1,3,5)]
+        channels=[v/12.92 if v<=0.04045 else ((v+0.055)/1.055)**2.4 for v in rgb]
+        return sum(v*x for v,x in zip(channels,(.2126,.7152,.0722)))
+    high,low=sorted((luminance(a),luminance(b)),reverse=True)
+    return (high+.05)/(low+.05)
 
-def ratio(fore, back):
-    def lum(rgb):
-        channels = [int(rgb[i:i+2],16)/255 for i in (1,3,5)]
-        linear = [x/12.92 if x<=0.04045 else ((x+0.055)/1.055)**2.4 for x in channels]
-        return sum(a*b for a,b in zip(linear,(0.2126,0.7152,0.0722)))
-    a,b=sorted((lum(fore),lum(back)),reverse=True)
-    return (a+.05)/(b+.05)
-
-class HolstPaletteTest(unittest.TestCase):
-    def test_exact_colors(self):
-        css=(ROOT/'holst-theme.css').read_text()
-        self.assertTrue(all(c in css for c in COLORS))
-        self.assertEqual(len(re.findall(r'--holst-(?:deep|navy|slate|sage|sand|ivory):',css)),6)
-
-    def test_stylesheet_order_and_metadata(self):
+class ObservatoryAzureTests(unittest.TestCase):
+    def test_theme_and_metadata(self):
         html=(ROOT/'index.html').read_text()
-        self.assertLess(html.index('./style.css'),html.index('./holst-theme.css'))
-        self.assertNotIn('nebula-theme.css',html)
-        self.assertIn('content="#0D1B2A"',html)
-
-    def test_service_worker_and_pwa(self):
+        self.assertLess(html.index('./style.css'),html.index('observatory-theme.css'))
+        self.assertNotIn('href="./holst-theme.css"',html)
+        self.assertIn('content="#081522"',html)
+        css=(ROOT/'observatory-theme.css').read_text()
+        for color in ('#06111e','#081522','#54aeff','#55b5ff','#d8b48a'):
+            self.assertIn(color,css.lower() if color!='#081522' else html.lower())
+    def test_service_worker_pwa(self):
         sw=(ROOT/'sw.js').read_text()
-        self.assertIn('astraforge-ghpages-v10-holst-palette',sw)
-        self.assertIn("'./holst-theme.css'",sw)
-        m=json.loads((ROOT/'manifest.webmanifest').read_text())
-        self.assertEqual(m['background_color'],'#0D1B2A')
-        self.assertEqual(m['theme_color'],'#0D1B2A')
-        self.assertTrue((ROOT/'icons/icon-192.png').exists())
-        self.assertTrue((ROOT/'icons/icon-512.png').exists())
-        logo=(ROOT/'icons/logo.svg').read_text()
-        self.assertTrue(all(c in logo for c in ('#0D1B2A','#D4C4A8','#415A77','#778D7A')))
+        self.assertIn('astraforge-ghpages-v11-observatory-azure',sw)
+        self.assertIn("'./observatory-theme.css'",sw)
+        manifest=json.loads((ROOT/'manifest.webmanifest').read_text())
+        self.assertEqual(manifest['background_color'],'#081522')
+        self.assertEqual(manifest['theme_color'],'#081522')
+        for asset in ('icons/logo.svg','icons/icon-192.png','icons/icon-512.png'):
+            self.assertTrue((ROOT/asset).exists(),asset)
+        self.assertIn('#D8B48A',(ROOT/'icons/logo.svg').read_text())
+    def test_layout_has_real_panels_and_single_ids(self):
+        from html.parser import HTMLParser
+        class IDs(HTMLParser):
+            def __init__(self):super().__init__();self.all=[]
+            def handle_starttag(self,tag,attrs):
+                d=dict(attrs)
+                if 'id' in d:self.all.append(d['id'])
+        html=(ROOT/'index.html').read_text();p=IDs();p.feed(html)
+        self.assertEqual(len(p.all),len(set(p.all)))
+        for key in ('btnRun','editor','output','scenePanel','webPanel','databasePanel','rightbar','syntaxLayer','quickOpenDialog','btnSampleOrbit'):
+            self.assertIn(key,p.all)
+    def test_webviz_color_defaults(self):
+        s=(ROOT/'webviz.js').read_text()
+        self.assertIn("THREE.Color('#061320')",s)
+        self.assertIn('0x31597b,0x16344f',s)
+    def test_text_contrast(self):
+        for fore,back in (('#e5effa','#06111e'),('#a3bacd','#0b1b2a'),('#061729','#55b5ff'),('#95b4cd','#081724')):
+            with self.subTest(fore=fore,back=back):self.assertGreaterEqual(contrast(fore,back),4.5)
+    def test_core_engine_unchanged(self):
+        for fn in ('worker.js','catalog.js','astraforge_web.py','astraforge_db.py'):
+            self.assertTrue((ROOT/fn).is_file())
 
-    def test_threejs_defaults(self):
-        js=(ROOT/'webviz.js').read_text()
-        self.assertIn("THREE.Color('#0D1B2A')",js)
-        self.assertIn('0x415A77,0x1B263B',js)
-        self.assertIn("'#D4C4A8'",js)
-
-    def test_wcag_text_contrast(self):
-        for fore,back in (
-            ('#F4F1DE','#0D1B2A'),('#D4C4A8','#1B263B'),
-            ('#F4F1DE','#415A77'),('#0D1B2A','#D4C4A8'),
-            ('#778D7A','#0D1B2A'),('#BDC1B4','#1B2A3D'),
-        ):
-            with self.subTest(fore=fore,back=back):self.assertGreaterEqual(ratio(fore,back),4.5)
-
-    def test_preserves_application_logic(self):
-        for fn in ('app.js','worker.js','astraforge_web.py','astraforge_db.py','catalog.js'):
-            self.assertTrue((ROOT/fn).exists())
-
-if __name__ == '__main__':unittest.main()
+if __name__=='__main__':unittest.main()

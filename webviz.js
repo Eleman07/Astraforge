@@ -12,18 +12,18 @@ export async function renderScene(container,description,{onPick}={}){
   const previous=world?.cameraState||null;
   if(world?.dispose)world.dispose();
   container.replaceChildren();
-  const scene=new THREE.Scene();scene.background=new THREE.Color('#0D1B2A');
+  const scene=new THREE.Scene();scene.background=new THREE.Color('#061320');
   const camera=new THREE.PerspectiveCamera(55,1,0.1,1e8);
   const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'low-power'});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
   container.append(renderer.domElement);
   scene.add(new THREE.AmbientLight(0xffffff,1.4));
   const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(6,10,8);scene.add(sun);
-  scene.add(new THREE.GridHelper(20,20,0x415A77,0x1B263B));
+  scene.add(new THREE.GridHelper(20,20,0x31597b,0x16344f));
   const meshById=new Map(),pickable=[],positions=[];
   let currentTarget=new THREE.Vector3(),radius=15,azimuth=.7,polar=1.05;
   for(const item of description.objects.slice(0,100)){
-    const color=/^#[a-f0-9]{6}$/i.test(item.color||'')?item.color:'#D4C4A8';
+    const color=/^#[a-f0-9]{6}$/i.test(item.color||'')?item.color:'#55b5ff';
     const id=String(item.id||'');
     if(item.type==='sphere'||item.type==='box'){
       const geometry=item.type==='sphere'?

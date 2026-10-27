@@ -54,16 +54,75 @@ async function createExample(){
   if(filename.endsWith('.html'))previewHtml();
  }catch(error){toast(error.message)}
 }
-function setStudio(name){
- currentStudio=name;
+// Output is always visible below the editor. Preview tools live in the right dock.
+function setStudio(name,{focusMobile=true}={}){
+ const preview=name==='output'?(currentStudio==='output'?'scene':currentStudio):name;
+ currentStudio=preview;
  for(const tab of document.querySelectorAll('[data-studio]')){
-  const on=tab.dataset.studio===name;tab.classList.toggle('active',on);tab.setAttribute('aria-selected',String(on));
+  const on=tab.dataset.studio===preview;
+  tab.classList.toggle('active',on);tab.setAttribute('aria-selected',String(on));
  }
- $('output').hidden=name!=='output';$('plotZone').hidden=name!=='output';
- for(const [id,tab] of [['scenePanel','scene'],['webPanel','web'],['databasePanel','database']])$(id).hidden=name!==tab;
- $('consoleExpanded').classList.toggle('preview-expanded',name!=='output');
- if(name==='scene')void import('./webviz.js').then(m=>m.resizeScene()).catch(()=>{});
- if(name==='database')void refreshTables();
+ $('output').hidden=false;
+ $('plotZone').hidden=false;
+ for(const [id,tab] of [['scenePanel','scene'],['webPanel','web'],['databasePanel','database']])$(id).hidden=preview!==tab;
+ $('consoleExpanded').classList.remove('preview-expanded');
+ if(preview==='scene')void import('./webviz.js').then(m=>m.resizeScene()).catch(()=>{});
+ if(preview==='database')void refreshTables();
+ if(focusMobile && name!=='output' && matchMedia('(max-width:890px)').matches) setMobileWorkspace(preview==='database'?'database':'preview',false);
+}
+function setMobileWorkspace(view,applyStudio=true){
+ if(!['code','preview','database','ai'].includes(view))return;
+ $('workbench').dataset.mobileView=view;
+ for(const button of document.querySelectorAll('[data-workspace-view]')){
+  const on=button.dataset.workspaceView===view;
+  button.classList.toggle('active',on);button.setAttribute('aria-selected',String(on));
+ }
+ if(applyStudio){
+  if(view==='preview')setStudio('scene',{focusMobile:false});
+  if(view==='database')setStudio('database',{focusMobile:false});
+ }
+ if(view==='preview')void import('./webviz.js').then(m=>m.resizeScene()).catch(()=>{});
+}
+// A tiny, dependency-free highlighting layer; input remains an accessible textarea.
+const PYTHON_TOKENS=/(#[^\n]*|(?:\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*')|\b(?:False|True|None)\b|\b(?:async|await|class|def|from|import|return|if|elif|else|for|while|try|except|finally|with|as|in|not|and|or|is|lambda|yield|pass|raise|break|continue|global|nonlocal|assert|del)\b|\b(?:print|range|len|int|float|str|dict|list|set|tuple|enumerate|zip|super|open|type|sum|min|max|abs)\b|\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|@[A-Za-z_]\w*)/g;
+function escapeCode(text){return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function highlightPython(){
+ const editor=$('editor'),layer=$('syntaxLayer'),code=editor.value;
+ if(code.length>170000 || !active.endsWith('.py')){
+  document.documentElement.classList.remove('syntax-ready');layer.textContent=code;return;
+ }
+ let markup='',last=0;
+ PYTHON_TOKENS.lastIndex=0;
+ for(const found of code.matchAll(PYTHON_TOKENS)){
+  const value=found[0];markup+=escapeCode(code.slice(last,found.index));
+  const kind=value.startsWith('#')?'comment':value[0]==='\"'||value[0]==="'"?'string':value[0]==='@'?'decorator':/^[0-9]/.test(value)?'number':/^(False|True|None)$/.test(value)?'builtin':/^(print|range|len|int|float|str|dict|list|set|tuple|enumerate|zip|super|open|type|sum|min|max|abs)$/.test(value)?'builtin':'keyword';
+  markup+='<span class="tok-'+kind+'">'+escapeCode(value)+'</span>';last=found.index+value.length;
+ }
+ layer.innerHTML=markup+escapeCode(code.slice(last))+'\n';
+ document.documentElement.classList.add('syntax-ready');
+ layer.scrollTop=editor.scrollTop;layer.scrollLeft=editor.scrollLeft;
+}
+
+function openQuickOpen(){
+ const dialog=$('quickOpenDialog');if(!dialog.open)dialog.showModal();
+ $('quickOpenInput').value='';filterQuickOpen();$('quickOpenInput').focus();
+}
+function filterQuickOpen(){
+ const search=$('quickOpenInput').value.trim().toLowerCase(),results=$('quickOpenResults');results.replaceChildren();
+ let found=0;
+ for(const filename of Object.keys(files).filter(name=>name.toLowerCase().includes(search)).slice(0,12)){
+  const button=document.createElement('button');button.type='button';button.className='quick-result';
+  const type=document.createElement('small');type.textContent='FILE';const name=document.createElement('span');name.textContent=filename;
+  button.append(type,name);button.onclick=()=>{switchFile(filename);$('quickOpenDialog').close();};results.append(button);found++;
+ }
+ const filtered=CATALOG.filter(pkg=>[pkg.name,pkg.id,pkg.group].some(v=>String(v).toLowerCase().includes(search)));
+ for(const pkg of filtered.slice(0,Math.max(0,14-found))){
+  const button=document.createElement('button');button.type='button';button.className='quick-result';
+  const type=document.createElement('small');type.textContent='PACKAGE';const name=document.createElement('span');name.textContent=pkg.name;
+  const desc=document.createElement('em');desc.textContent=pkg.group;
+  button.append(type,name,desc);button.onclick=()=>{showAll=true;$('btnAllPackages').setAttribute('aria-pressed','true');$('packageSearch').value=pkg.name;renderPackages();$('sidebar').classList.add('open');$('quickOpenDialog').close();};results.append(button);found++;
+ }
+ if(!found){const p=document.createElement('p');p.className='quick-no-results';p.textContent='No matching files or packages';results.append(p)}
 }
 function previewHtml(){
  if(!active.endsWith('.html'))return;
@@ -207,7 +266,7 @@ async function createDatabaseTable(){
 async function onWorkerResult(result){
  await persistDatabases(result);
  if(result.scene){lastScene=result.scene;setStudio('scene');
-  try{const module=await import('./webviz.js');await module.renderScene($('sceneViewport'),result.scene,{onPick:(action,id)=>triggerPythonEvent(action,id)});$('sceneTitle').textContent=result.scene.title||'3D scene';}
+  try{const module=await import('./webviz.js');await module.renderScene($('sceneViewport'),result.scene,{onPick:(action,id)=>triggerPythonEvent(action,id)});$('visualPlaceholder').hidden=true;$('sceneTitle').textContent=result.scene.title||'3D scene';}
   catch(error){$('sceneTitle').textContent='WebGL unavailable: '+error.message;log('\n3D preview error: '+error.message+'\n',true);}
  }
  if(result.ui)renderBrowserUI(result.ui);
@@ -241,7 +300,7 @@ function setStatus(text,state='loading'){$('runtimeStatus').className='engine-ch
 function safeFile(filename){return /^[A-Za-z0-9_ .-]{1,100}\.(py|txt|json|md|html|css|js)$/i.test(filename)&&!filename.startsWith('.');}
 async function saveFiles(){files[active]=$('editor').value;try{await storageSet('workspace',{files,active,role:$('role').value,selectedByProfile});$('fileStatus').textContent=active+' · saved locally';}catch(e){toast('Local save failed: '+e.message);}}
 function scheduleSave(){clearTimeout(window.afAutosave);window.afAutosave=setTimeout(()=>{void saveFiles();},450);}
-function updateLineNumbers(){const editor=$('editor');const count=editor.value.split('\n').length;const previous=Number($('lineNumbers').dataset.count||0);if(previous!==count){$('lineNumbers').textContent=Array.from({length:count},(_,i)=>String(i+1)).join('\n');$('lineNumbers').dataset.count=String(count);} $('lineNumbers').scrollTop=editor.scrollTop;}
+function updateLineNumbers(){const editor=$('editor');const count=editor.value.split('\n').length;const previous=Number($('lineNumbers').dataset.count||0);if(previous!==count){$('lineNumbers').textContent=Array.from({length:count},(_,i)=>String(i+1)).join('\n');$('lineNumbers').dataset.count=String(count);} $('lineNumbers').scrollTop=editor.scrollTop;$('syntaxLayer').scrollTop=editor.scrollTop;$('syntaxLayer').scrollLeft=editor.scrollLeft;highlightPython();}
 function renderFiles(){const wrap=$('files');wrap.replaceChildren();for(const name of Object.keys(files).sort()){const button=document.createElement('button');button.className='file-item'+(name===active?' active':'');button.type='button';const icon=document.createElement('span');icon.className='file-icon';icon.textContent=name.endsWith('.py')?'Py':'◇';const title=document.createElement('span');title.textContent=name;button.append(icon,title);button.onclick=()=>switchFile(name);wrap.append(button);} $('tabname').textContent=active;$('pathLabel').textContent='workspace / '+active;}
 function switchFile(filename){if(!(filename in files))return;files[active]=$('editor').value;active=filename;$('editor').value=files[active];renderFiles();updateLineNumbers();void saveFiles();if(matchMedia('(max-width:650px)').matches)$('sidebar').classList.remove('open');if(active.endsWith('.html'))previewHtml();}
 function getSelection(role){if(!Array.isArray(selectedByProfile[role])) selectedByProfile[role]=[...(PROFILES[role]||PROFILES.general).recommended];return new Set(selectedByProfile[role]);}
@@ -299,7 +358,13 @@ async function runCode(){
 }
 async function installPackages(){if(running)return;const selected=getSelection($('role').value);const names=[...selected].filter(x=>BROWSER_IDS.has(x)||BUNDLED_IDS.has(x)||STDLIB_IDS.has(x));if(!names.length){toast('Select at least one browser package');return;}updateBusy(true);log('\nInstalling '+names.length+' selected packages. Large libraries may take time…\n');try{const response=await send('packages',{packages:names});for(const id of response.packages||[])installed.add(id);toast('Packages loaded: '+names.length);if(installed.has('astra-simulator-client'))log('ASTRA SDK ready. First AstraClient call loads the local simulation engine; no server required.\n');}catch(e){log(e.message+'\n',true);toast('Package installation incomplete');}finally{updateBusy(false);}}
 function download(filename,text){const obj=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=obj;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(obj),2000);}
-function toggleMobile(id){const el=$(id);el.classList.toggle('open');if(el.classList.contains('open'))$(id==='sidebar'?'rightbar':'sidebar').classList.remove('open');}
+function toggleMobile(id){
+ if(id==='rightbar'){
+  if(matchMedia('(max-width:890px)').matches){setMobileWorkspace('ai');return;}
+  $('rightbar').classList.toggle('minimized');return;
+ }
+ const sidebar=$(id);sidebar.classList.toggle('open');
+}
 async function askAI(){const key=$('aiKey').value.trim(),prompt=$('aiPrompt').value.trim(),model=$('aiModel').value.trim()||'openrouter/free';if(!key){toast('Enter your OpenRouter API key');return;}if(!prompt){toast('Write your question first');return;}const add=(text,who)=>{const bubble=document.createElement('div');bubble.className='ai-msg '+who;bubble.textContent=text;$('aiMessages').append(bubble);$('aiMessages').scrollTop=$('aiMessages').scrollHeight;};add(prompt,'user');$('btnAsk').disabled=true;
  try{const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json','X-Title':'AstraForge IDE'},body:JSON.stringify({model,messages:[{role:'system',content:'You are a precise engineering and Python development assistant. Explain assumptions and limitations. Never claim to have executed code that you have not run.'},{role:'user',content:prompt+'\n\nCurrent Python file '+active+':\n```python\n'+$('editor').value.slice(0,14000)+'\n```'}],max_tokens:1600})});const answer=await res.json();if(!res.ok)throw Error(answer?.error?.message||'OpenRouter HTTP '+res.status);add(typeof answer?.choices?.[0]?.message?.content==='string'?answer.choices[0].message.content:JSON.stringify(answer?.choices?.[0]?.message?.content??''),'assistant');$('aiPrompt').value='';}catch(e){add('Request failed: '+e.message,'assistant');}finally{$('btnAsk').disabled=false;}}
 async function init(){for(const [key,p] of Object.entries(PROFILES)){const o=document.createElement('option');o.value=key;o.textContent=p.name;$('role').append(o);}
@@ -309,6 +374,7 @@ async function init(){for(const [key,p] of Object.entries(PROFILES)){const o=doc
  const updateConn=()=>{$('connection').textContent=navigator.onLine?'Online':'Offline';$('connectionDot').style.background=navigator.onLine?'var(--green)':'var(--red)';};updateConn();window.addEventListener('online',updateConn);window.addEventListener('offline',updateConn);
  $('editor').addEventListener('input',()=>{files[active]=$('editor').value;$('fileStatus').textContent=active+' · unsaved';updateLineNumbers();scheduleSave();});$('editor').addEventListener('scroll',updateLineNumbers);
  $('editor').addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const a=e.target.selectionStart,b=e.target.selectionEnd;e.target.setRangeText('    ',a,b,'end');e.target.dispatchEvent(new Event('input',{bubbles:true}));}});
+ $('btnQuickSearch').onclick=openQuickOpen;$('quickOpenInput').oninput=filterQuickOpen;$('quickOpenClose').onclick=()=>$('quickOpenDialog').close();$('quickOpenInput').onkeydown=e=>{if(e.key==='Enter'){const first=$('quickOpenResults').querySelector('button');if(first){e.preventDefault();first.click();}}};
  $('btnSave').onclick=()=>{void saveFiles();toast('Saved locally');};$('btnRun').onclick=()=>void runCode();$('btnStop').onclick=()=>stopEngine();$('btnInstall').onclick=()=>void installPackages();$('btnClear').onclick=()=>$('output').replaceChildren();
  $('btnCreateExample').onclick=()=>void createExample();$('btnRunSQL').onclick=()=>void runSQL();
  $('btnRefreshTables').onclick=()=>void refreshTables();
@@ -330,15 +396,18 @@ async function init(){for(const [key,p] of Object.entries(PROFILES)){const o=doc
   catch(error){toast('Import failed: '+error.message)}e.target.value='';
  };
  for(const button of document.querySelectorAll('[data-studio]'))button.onclick=()=>setStudio(button.dataset.studio);
+ for(const button of document.querySelectorAll('[data-workspace-view]'))button.onclick=()=>setMobileWorkspace(button.dataset.workspaceView);
+ $('btnSampleOrbit').onclick=async()=>{$('exampleSelect').value='scene';await createExample();await runCode();};
  $('btnNew').onclick=()=>{const filename=window.prompt('New Python filename','simulation.py');if(filename===null)return;if(!safeFile(filename)){toast('Use a simple filename with .py, .html, .txt, .css, .js or .md');return;}if(!Object.hasOwn(files,filename))files[filename]=filename.endsWith('.html')?'<!doctype html>\n<title>Preview</title>\n':'# New file\n';switchFile(filename);};
  $('btnImport').onclick=()=>$('importInput').click();$('importInput').onchange=async e=>{for(const file of [...e.target.files].slice(0,20)){if(!safeFile(file.name)||file.size>1048576){toast('Unsupported filename or file larger than 1 MB');continue;}files[file.name]=await file.text();active=file.name;}$('editor').value=files[active];renderFiles();updateLineNumbers();void saveFiles();e.target.value='';};
  $('btnExport').onclick=()=>{files[active]=$('editor').value;download(active,files[active]);};
  $('btnAstraDemo').onclick=()=>{files[active]=$('editor').value;const filename='astra_browser_demo.py';files[filename]=ASTRA_EXAMPLE;switchFile(filename);$('role').value='aerospace';updateProfile();void saveFiles();toast('ASTRA example ready — press Run');};
  $('role').onchange=()=>{updateProfile();void saveFiles();};$('packageSearch').oninput=renderPackages;$('btnAllPackages').onclick=()=>{showAll=!showAll;$('btnAllPackages').setAttribute('aria-pressed',String(showAll));renderPackages();};
  $('btnSettings').onclick=()=>$('settingsDialog').showModal();$('closeSettings').onclick=()=>$('settingsDialog').close();$('btnGithub').onclick=()=>$('githubDialog').showModal();$('closeGithub').onclick=()=>$('githubDialog').close();
- $('btnRailPackages').onclick=()=>{$('sidebar').classList.add('open');$('packageSearch').focus();};$('btnRailAI').onclick=()=>toggleMobile('rightbar');$('btnAI').onclick=()=>toggleMobile('rightbar');$('btnCloseAI').onclick=()=>$('rightbar').classList.remove('open');$('btnSide').onclick=()=>toggleMobile('sidebar');
+ $('btnRailPackages').onclick=()=>{$('sidebar').classList.add('open');$('packageSearch').focus();};$('btnRailVisualize').onclick=()=>setStudio('scene');$('btnRailDatabase').onclick=()=>setStudio('database');$('btnRailAI').onclick=()=>toggleMobile('rightbar');$('btnAI').onclick=()=>toggleMobile('rightbar');$('btnCloseAI').onclick=()=>{if(matchMedia('(max-width:890px)').matches)setMobileWorkspace('code');else $('rightbar').classList.toggle('minimized');};$('btnSide').onclick=()=>toggleMobile('sidebar');
  $('importRaw').onclick=async()=>{try{const u=new URL($('rawUrl').value);if(u.protocol!=='https:'||u.hostname!=='raw.githubusercontent.com'||!u.pathname.endsWith('.py'))throw Error('Use a public raw.githubusercontent.com .py URL');const filename=u.pathname.split('/').at(-1);if(!safeFile(filename))throw Error('Invalid source filename');const res=await fetch(u);if(!res.ok)throw Error('GitHub HTTP '+res.status);if(Number(res.headers.get('content-length')||0)>1048576)throw Error('File too large');const content=await res.text();if(content.length>1048576)throw Error('File too large');files[filename]=content;switchFile(filename);$('githubDialog').close();toast('Python file imported');}catch(e){toast(e.message);}};
- $('btnAsk').onclick=()=>void askAI();document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();void saveFiles();toast('Saved locally');}if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();void runCode();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('editor').focus();}});
+ $('btnAsk').onclick=()=>void askAI();document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();void saveFiles();toast('Saved locally');}if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();void runCode();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openQuickOpen();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='p'){e.preventDefault();$('editor').focus();}});
+ setStudio('scene',{focusMobile:false});
  if('serviceWorker' in navigator&&location.protocol!=='file:'){navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('ServiceWorker:',e));}
 }
 void init();

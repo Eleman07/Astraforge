@@ -1,81 +1,106 @@
-# Tutorial: aggiornare AstraForge 5.1 su GitHub Pages
+# Come aggiornare AstraForge a 5.4 su Windows 11 (PowerShell)
 
-Questo ZIP contiene **solo il sito statico**. Non serve installare un server, creare un VPS o configurare Docker.
+**Repository ufficiale:** https://github.com/Eleman07/Astraforge
 
-## 1) Prepara il progetto sul tuo Ubuntu
+**Versione sorgente di partenza:** 5.3 Holst (verificata nel repository `main` prima di creare questa patch).
 
-Scarica `astraforge-5.1-interactive-studio.zip` nella cartella Downloads. Poi:
+## 0. Prerequisiti
 
-```bash
-cd ~
-# Solo se non hai ancora clonato il repository:
-if [ ! -d "$HOME/Astraforge/.git" ]; then
-  git clone https://github.com/Eleman07/Astraforge.git "$HOME/Astraforge"
-fi
-cd ~/Astraforge
+Apri **Windows PowerShell** oppure **Windows Terminal → PowerShell**. Verifica Git:
+
+```powershell
+git --version
+```
+
+Se Git non viene trovato, puoi installarlo con:
+
+```powershell
+winget install --id Git.Git -e --source winget
+```
+
+Dopo l'installazione **chiudi e riapri PowerShell**.
+
+## 1. Apri o clona il repository
+
+Questo esempio usa `Documents\Astraforge`; se il progetto è già in un'altra cartella, modifica il valore di `$repo`.
+
+```powershell
+$repo = Join-Path $HOME 'Documents\Astraforge'
+
+if (-not (Test-Path (Join-Path $repo '.git'))) {
+    git clone https://github.com/Eleman07/Astraforge.git $repo
+}
+
+Set-Location $repo
 git status
 git pull --ff-only origin main
 ```
 
-Se Git dice che hai modifiche locali non salvate, **non** usare `git reset --hard`. Fai prima una copia delle modifiche o committale.
+Se `git status` mostra modifiche locali, controllale e salvale prima del `pull`; **non cancellare lavori esistenti**.
 
-## 2) Estrai l'aggiornamento
+## 2. Estrai la PATCH
 
-```bash
-mkdir -p ~/Downloads/astraforge-5.1-update
-unzip -o ~/Downloads/astraforge-5.1-interactive-studio.zip \
-  -d ~/Downloads/astraforge-5.1-update
+Scarica **`astraforge-5.4-observatory-PATCH.zip`** nella cartella Download di Windows. Esegui:
+
+```powershell
+$zip = Join-Path $HOME 'Downloads\astraforge-5.4-observatory-PATCH.zip'
+$stage = Join-Path $env:TEMP 'astraforge-5.4-update'
+
+if (-not (Test-Path $zip)) { throw "ZIP non trovato: $zip" }
+if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+Expand-Archive -LiteralPath $zip -DestinationPath $stage -Force
 ```
 
-## 3) Copia i nuovi file
+## 3. Copia i file nel repository senza eliminare i tuoi progetti
 
-```bash
-rsync -av \
-  --exclude='__pycache__' \
-  ~/Downloads/astraforge-5.1-update/ \
-  ~/Astraforge/
-```
+```powershell
+robocopy $stage $repo /E /R:1 /W:1
+if ($LASTEXITCODE -gt 7) { throw 'Errore durante la copia con robocopy' }
 
-Non usare `rsync --delete`, così non elimini involontariamente file del repository che non sono presenti nello ZIP.
-
-## 4) Verifica e pubblica
-
-```bash
-cd ~/Astraforge
-node --check app.js
-node --check worker.js
-node --check webviz.js
-node --check sw.js
-python3 -m unittest discover -s tests -v
+Remove-Item (Join-Path $repo 'holst-theme.css') -ErrorAction SilentlyContinue
+Set-Location $repo
 git status
 git diff --stat
+```
+
+`robocopy` non usa `/MIR`, quindi **non elimina** altri file dal repository. L'unica eliminazione proposta riguarda il vecchio stylesheet Holst, non più utilizzato.
+
+## 4. Verifica i file e pubblica
+
+Se hai Node.js (opzionale), verifica la sintassi:
+
+```powershell
+node --check .\app.js
+node --check .\webviz.js
+node --check .\sw.js
+```
+
+Poi pubblica:
+
+```powershell
 git add -A
-git commit -m "AstraForge 5.1 browser-first WebGL and local SQL"
+git commit -m "AstraForge 5.4 - Observatory Azure redesign"
 git push origin main
 ```
 
-Se `git commit` mostra `nothing to commit`, controlla se hai copiato i file nella directory corretta. Se `node` non è disponibile, il controllo sintattico è opzionale, non indispensabile per GitHub Pages.
+Se Git ti chiede di autenticarti, completa l'accesso tramite il browser o Git Credential Manager. **Non inserire un token personale nel codice dell'app.**
 
-## 5) Apri la pagina
+Se non compare alcuna modifica dopo `git add -A`, Git dirà che non c'è nulla da committare; significa che l'aggiornamento è già presente o non è stato copiato correttamente. Controlla `git status`.
 
-- Controlla il deployment: <https://github.com/Eleman07/Astraforge/actions>
-- Apri l'IDE: <https://eleman07.github.io/Astraforge/>
-- Se vedi la vecchia versione: aggiorna con Ctrl+Shift+R oppure elimina i dati del Service Worker per quel sito.
+## 5. Controlla il deployment e prova l'interfaccia
 
-## 6) Prove funzionali consigliate
+1. Apri https://github.com/Eleman07/Astraforge/actions e verifica che il deployment sia verde.
+2. Apri https://eleman07.github.io/Astraforge/ e premi `Ctrl+Shift+R`.
+3. Desktop: conferma la presenza dell'editor a sinistra, della scena orbitale illustrativa a destra e del tasto **Run** azzurro.
+4. Premi `Ctrl+K`, cerca `NumPy`, poi apri un file con la stessa ricerca.
+5. Premi **Run 3D sample** e verifica che il placeholder venga sostituito da un vero canvas WebGL interattivo.
+6. Prova uno script NumPy, una UI Python e SQLite dal catalogo degli esempi.
+7. Sul telefono, usa le schede **Code / Visualize / Database / Astra AI**.
 
-- Scegli `SQLite persistent database`, premi Create example e poi Run; entra in Database e fai `SELECT * FROM experiments;`
-- Scegli `3D / WebGL orbit`, premi Run e verifica la vista 3D.
-- Scegli `Tkinter-style web UI`: si vede un'interfaccia web, **non** una vera finestra Tkinter.
-- Scegli `Python Jinja2 page`: si renderizza HTML prodotto da Python, **non** un server Django.
-- Scegli `Flight mechanics (browser)`: è una demo fisica autonoma, **non** il pacchetto PyFME.
+**Attenzione:** la prima esecuzione deve scaricare Pyodide e alcune librerie dalla rete. La visualizzazione introduttiva non rappresenta dati fisici eseguiti finché non lanci un esempio.
 
-**Limiti importanti:** serve una connessione Internet al primo download di Pyodide/Three.js. I database SQLite sono locali al dispositivo e devono essere esportati per backup. Il JavaScript pubblicato su GitHub Pages è visibile ai visitatori.
+Se vedi ancora l'interfaccia precedente, chiudi la scheda, riapri e forza l'aggiornamento. Solo se persiste, dalla scheda Application/Applicazione di DevTools puoi rimuovere il service worker del sito e ricaricare.
 
-## 7) Prova le nuove funzioni
+## Versione FULL
 
-1. Browser examples → **Tkinter-style web UI** → Create example → Run → Web UI → cambia altitude e premi Calculate orbit. La callback gira in Pyodide, non su un server.
-2. **3D / WebGL orbit** → Create example → Run → Play → seleziona il satellite con mouse o tocco. La callback Python ne cambia il colore.
-3. **SQLite persistent database** → Create example → Run → Database → Refresh → seleziona experiments → Add row / Save / Delete. Esporta `engineering.db` per il backup.
-
-Limiti: ModernGL e Tkinter originali non vengono eseguiti nativamente nel browser. Sono API web alternative. DB locali per dispositivo, massimo 4 MiB per file; non è previsto un server SQL.
+La versione `astraforge-5.4-observatory-FULL.zip` include tutti i file sorgente di 5.4. È utile per partire da un nuovo clone o ricostruire il sito, ma per aggiornare il repository attuale è consigliata la **PATCH**.

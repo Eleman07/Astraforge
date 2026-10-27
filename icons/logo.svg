@@ -1,7 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="AstraForge">
-  <rect width="128" height="128" rx="26" fill="#0D1B2A"/>
-  <rect x="5" y="5" width="118" height="118" rx="22" fill="none" stroke="#415A77" stroke-width="2"/>
-  <path d="M64 11 76 51 117 64 76 77 64 117 52 77 11 64 52 51Z" fill="#D4C4A8"/>
-  <circle cx="64" cy="64" r="11" fill="#415A77"/>
-  <circle cx="64" cy="64" r="4" fill="#778D7A"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AstraForge">
+  <rect width="64" height="64" rx="15" fill="#081522"/>
+  <path fill="#D8B48A" d="M31.3 6 58 53 37.5 45 28 22 16 46 7 57z"/>
+  <path fill="#E2C69F" d="m18 48 19-11 15 19-22-10z"/>
 </svg>

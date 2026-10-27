@@ -1,12 +1,14 @@
-# AstraForge 5.3 — Deployment checklist
+# Checklist deploy AstraForge 5.4
 
-- [ ] GitHub Pages deploy completed on `Eleman07/Astraforge`.
-- [ ] `index.html` loads **holst-theme.css** after `style.css`.
-- [ ] Cached PWA worker updated to `astraforge-ghpages-v10-holst-palette`.
-- [ ] Midnight `#0D1B2A`, sand Run button `#D4C4A8`, ivory text `#F4F1DE` are visible.
-- [ ] Desktop sidebar, editor, assistant, console and SQL table browser readable.
-- [ ] Mobile header, editor, console show without horizontal viewport overflow.
-- [ ] ASTRA Python SDK, Web UI callbacks, 3D playback and database functions still work.
-- [ ] Manifest/icons use the Holst colors.
+- [ ] GitHub Pages deployment `main` riuscito
+- [ ] Hard reload carica `observatory-theme.css`
+- [ ] Logo oro, azioni azzurre, editor a sinistra, Visualize/Web UI/Database a destra
+- [ ] `Ctrl+K` apre ricerca file e librerie
+- [ ] `Ctrl+Enter` esegue Python, `Ctrl+S` salva file
+- [ ] `Run 3D sample` sostituisce l'illustrazione con WebGL effettivo
+- [ ] Esempio Web UI con callback Python funzionante
+- [ ] SQLite: crea tabella, modifica riga, esporta `.db`
+- [ ] Vista smartphone: Code, Visualize, Database, Astra AI accessibili
+- [ ] Verificato il salvataggio dopo riavvio del browser
 
-The attached screenshots test the genuine app markup and CSS only, without executing Pyodide; runtime/WebGL persistence on GitHub Pages must be checked by the owner.
+Nota: l'immagine orbitale mostrata prima dell'esecuzione è un'illustrazione, non dati calcolati.
