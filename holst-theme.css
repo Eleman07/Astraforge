@@ -1,0 +1,284 @@
+/* AstraForge 5.3 — HOLST Palette · exact colors from the user's image.
+ * Layered over original style.css: no Python, UI logic or project data changed.
+ * #0D1B2A #1B263B #415A77 #778D7A #D4C4A8 #F4F1DE
+ */
+:root {
+  color-scheme: dark;
+  --holst-deep: #0D1B2A;
+  --holst-navy: #1B263B;
+  --holst-slate: #415A77;
+  --holst-sage: #778D7A;
+  --holst-sand: #D4C4A8;
+  --holst-ivory: #F4F1DE;
+  /* Derived tones blend neighboring swatches for depth and legibility. */
+  --holst-header: #172335;
+  --holst-editor: #101F30;
+  --holst-sidebar: #1B2A3D;
+  --holst-panel: #24374D;
+  --holst-active: #314961;
+  --holst-hover: #354D63;
+  --holst-input: #152638;
+  --holst-outline: #506877;
+  --holst-outline-soft: #344C62;
+  --holst-muted-text: #D4C4A8;
+  --holst-dim-text: #BDC1B4;
+  --holst-focus: #F4F1DE;
+  --bg: var(--holst-deep);
+  --bg-deep: var(--holst-deep);
+  --surface: var(--holst-sidebar);
+  --surface-2: var(--holst-panel);
+  --surface-3: var(--holst-active);
+  --border: var(--holst-outline-soft);
+  --subtle: #304358;
+  --text: var(--holst-ivory);
+  --text-muted: var(--holst-muted-text);
+  --muted: var(--holst-dim-text);
+  --accent: var(--holst-sand);
+  --accent-bg: var(--holst-active);
+  --green: #B4D3AC;
+  --red: #F1A6A0;
+  --shadow: 0 16px 48px rgb(4 12 21 / 62%);
+  accent-color: var(--holst-sage);
+}
+
+/* Foundation. No decorative full-screen image behind source code. */
+html, body { background: var(--holst-deep); color: var(--text); }
+a { color: var(--holst-ivory); text-decoration-color: var(--holst-sage); }
+a:hover { text-decoration-color: var(--holst-ivory); }
+::selection { background: var(--holst-slate); color: var(--holst-ivory); }
+:focus-visible { outline: 2px solid var(--holst-focus); outline-offset: 2px; }
+button { transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+input, select, textarea { color-scheme: dark; }
+input::placeholder, textarea::placeholder { color: var(--holst-dim-text); opacity: .86; }
+
+/* Top bar and identity. Deliberately subtle star-field glow on chrome only. */
+.app-header {
+  background: radial-gradient(ellipse 48% 170% at 14% -58%, rgb(119 141 122 / 16%), transparent 85%),
+              linear-gradient(100deg, var(--holst-header), var(--holst-deep));
+  border-bottom-color: var(--holst-outline-soft);
+}
+.app-brand strong, .breadcrumb-strong { color: var(--holst-ivory); }
+.logo {
+  background: var(--holst-slate);
+  color: var(--holst-ivory);
+  border: 1px solid var(--holst-sage);
+  box-shadow: inset 0 1px 0 rgb(244 241 222 / 10%);
+}
+.brand-divider { background: var(--holst-outline); }
+.brand-context, .breadcrumb, .chevron { color: var(--holst-dim-text); }
+.engine-chip {
+  color: var(--holst-muted-text);
+  background: rgb(27 38 59 / 62%);
+  border-color: var(--holst-outline);
+}
+.led, .status-dot, .storage-dot { background: var(--holst-sage); }
+.header-button, .icon-button, .activity { color: var(--holst-muted-text); }
+.header-button:hover, .icon-button:hover, .activity:hover {
+  color: var(--holst-ivory); background: var(--holst-active);
+}
+
+/* Explorer / workspaces / catalog. */
+.activity-rail { background: var(--holst-deep); border-right-color: var(--border); }
+.activity.active {
+  background: var(--holst-active);
+  color: var(--holst-ivory);
+  border-left-color: var(--holst-sage);
+}
+.explorer { background: var(--holst-sidebar); border-right-color: var(--border); }
+.panel-label { color: var(--holst-muted-text); }
+.panel-label button { color: var(--holst-ivory); }
+.section-title {
+  background: #26394B;
+  border-top-color: var(--border);
+  color: var(--holst-muted-text);
+}
+.file-item { color: var(--holst-muted-text); }
+.file-item:hover, .package-row:hover, .file-operations button:hover { background: var(--holst-hover); }
+.file-item.active {
+  color: var(--holst-ivory);
+  background: var(--holst-active);
+  box-shadow: inset 2px 0 var(--holst-sage);
+}
+.file-icon { color: var(--holst-sand); }
+.file-operations button, .pkg-controls button {
+  color: var(--holst-muted-text);
+  background: var(--holst-panel);
+  border-color: var(--holst-outline);
+}
+.field-caption, .profile-hint, .package-counts, .package-note,
+.pkg-group, .pkg-desc, .explorer-footer, .pkg-group-note { color: var(--holst-dim-text); }
+.select-input, .pkg-controls input, .example-picker select {
+  background: var(--holst-input);
+  color: var(--holst-ivory);
+  border-color: var(--holst-outline);
+}
+.pkg-controls button[aria-pressed="true"] {
+  background: var(--holst-slate); color: var(--holst-ivory);
+}
+.package-scroll { scrollbar-color: var(--holst-sage) transparent; }
+.package-row input, input[type="checkbox"], input[type="range"] { accent-color: var(--holst-sage); }
+.pkg-name { color: var(--holst-ivory); }
+.pkg-flag { background: var(--holst-active); color: var(--holst-ivory); }
+.pkg-flag.native { background: #55413D; color: #F4F1DE; }
+.pkg-flag.bundled { background: #29453D; color: #E8F1DE; }
+.button-secondary {
+  background: var(--holst-active);
+  border-color: var(--holst-sage);
+  color: var(--holst-ivory);
+}
+.button-secondary:hover { background: var(--holst-slate); border-color: var(--holst-ivory); }
+.example-picker label { color: var(--holst-muted-text); }
+.explorer-footer { border-top-color: var(--border); }
+
+/* Code editor: matte blue-black with warm syntax-independent text. */
+.ide-main { background: var(--holst-editor); }
+.editor-bar { background: var(--holst-header); border-bottom-color: var(--border); }
+.editor-tab {
+  background: var(--holst-editor); color: var(--holst-ivory);
+  border-top-color: var(--holst-sage); border-right-color: var(--holst-outline-soft);
+}
+.small-button { color: var(--holst-muted-text); }
+.small-button:hover { color: var(--holst-ivory); background: var(--holst-active); }
+.run-button {
+  color: var(--holst-deep);
+  background: var(--holst-sand);
+  border-color: var(--holst-sand);
+  box-shadow: 0 2px 13px rgb(212 196 168 / 14%);
+}
+.run-button:hover { background: var(--holst-focus); border-color: var(--holst-focus); }
+.run-button:active { background: #BDAE97; border-color: #BDAE97; }
+.editor-breadcrumb, .line-numbers { color: var(--holst-dim-text); }
+.file-language { color: var(--holst-muted-text); }
+.editor-content textarea {
+  color: var(--holst-ivory);
+  caret-color: var(--holst-focus);
+  background: transparent;
+}
+.editor-content textarea::selection { background: var(--holst-slate); }
+
+/* Output, studio tabs and status. */
+.console-section { background: var(--holst-deep); border-top-color: var(--border); }
+.console-toolbar { border-bottom-color: var(--border); }
+.studio-tab, .console-subtitle, .console-actions { color: var(--holst-dim-text); }
+.studio-tab:hover { color: var(--holst-ivory); background: var(--holst-panel); }
+.studio-tab.active {
+  color: var(--holst-ivory);
+  background: var(--holst-active);
+  border-bottom-color: var(--holst-sage);
+}
+.console-tab { color: var(--holst-ivory); border-bottom-color: var(--holst-sage); }
+.console-actions button { color: var(--holst-muted-text); }
+.console-output { color: var(--holst-muted-text); }
+.out-error { color: var(--red); }
+.out-success { color: var(--green); }
+.status-bar {
+  background: var(--holst-navy);
+  color: var(--holst-ivory);
+  border-top-color: var(--holst-outline);
+}
+.status-divider { border-left-color: var(--holst-sage); }
+.studio-content { background: var(--holst-editor); }
+.panel-help, .preview-caption { color: var(--holst-muted-text); border-bottom-color: var(--border); }
+
+/* Python web UI, SQL studio and live database editor. */
+#declarativePreview { color: var(--holst-ivory); }
+#declarativePreview h3, .db-browser-bar strong { color: var(--holst-ivory); }
+.web-field, .web-text { color: var(--holst-muted-text); }
+.web-field input, .web-field > input, .web-field > textarea, .web-field > select,
+.web-field > progress, .sql-tools input, #sqlInput,
+.db-browser-bar select, .sql-grid input.cell-editor {
+  background: var(--holst-input);
+  color: var(--holst-ivory);
+  border-color: var(--holst-sage);
+}
+#declarativePreview button {
+  background: var(--holst-slate);
+  color: var(--holst-ivory);
+  border: 1px solid var(--holst-sage);
+}
+#declarativePreview button:hover { background: var(--holst-active); }
+.web-field input[type="range"], .af-scene-playback input { accent-color: var(--holst-sage); }
+#sqlResults, .sql-grid { color: var(--holst-ivory); }
+#sqlResults th, #sqlResults td, .sql-grid th, .sql-grid td { border-color: var(--holst-outline-soft); }
+#sqlResults th, .sql-grid th { background: var(--holst-active); }
+#sqlStatus, #dbGridStatus { color: var(--holst-muted-text); }
+.db-browser { background: var(--holst-editor); border-color: var(--holst-outline); }
+.db-browser-bar { background: var(--holst-panel); }
+.af-scene-playback {
+  color: var(--holst-muted-text);
+  background: var(--holst-panel);
+  border-top-color: var(--holst-outline);
+}
+.af-scene-playback button, .db-browser-bar button, .db-row-actions button {
+  color: var(--holst-ivory);
+  background: var(--holst-active);
+  border-color: var(--holst-sage);
+}
+.af-scene-playback button:hover, .db-browser-bar button:hover, .db-row-actions button:hover {
+  background: var(--holst-slate);
+}
+/* HTML page preview remains white when the authored HTML is white; do not
+   recolor users' output documents inside the sandboxed iframe. */
+
+/* Assistant, preferences and notifications. */
+.assistant-panel { background: var(--holst-sidebar); border-left-color: var(--border); }
+.assistant-header { border-bottom-color: var(--border); }
+.assistant-header strong { color: var(--holst-ivory); }
+.assistant-header span, .assistant-banner, .assistant-configuration label,
+.assistant-configuration label span, .compose-bottom span { color: var(--holst-muted-text); }
+.assistant-avatar {
+  background: var(--holst-slate);
+  color: var(--holst-ivory);
+}
+.ai-msg {
+  background: var(--holst-panel);
+  border-color: var(--holst-outline-soft);
+  color: var(--holst-ivory);
+}
+.ai-msg.user { background: var(--holst-active); border-color: var(--holst-sage); }
+.ai-msg.assistant { background: var(--holst-panel); }
+.assistant-configuration { border-top-color: var(--border); }
+.assistant-configuration input, .assistant-compose textarea {
+  background: var(--holst-input);
+  border-color: var(--holst-outline);
+  color: var(--holst-ivory);
+}
+.dialog { background: var(--holst-sidebar); border-color: var(--holst-sage); }
+.dialog::backdrop { background: rgb(13 27 42 / 86%); }
+.dialog-header { border-bottom-color: var(--border); }
+.dialog-header small, .dialog-body { color: var(--holst-muted-text); }
+.dialog-header h2, .dialog-body h3, .dialog-header button { color: var(--holst-ivory); }
+.dialog-body code, .dialog-body kbd { background: var(--holst-active); color: var(--holst-ivory); }
+.shortcut { border-bottom-color: var(--border); }
+.toast {
+  background: var(--holst-active);
+  color: var(--holst-ivory);
+  border-color: var(--holst-sage);
+  box-shadow: var(--shadow);
+}
+
+/* Soft scrollbars and touch interactions; no distracting full-screen effects. */
+* { scrollbar-color: var(--holst-outline) transparent; }
+@media (hover: hover) {
+  button:hover { filter: none; }
+}
+@media (max-width: 650px) {
+  .app-header { background: var(--holst-header); }
+  .explorer.open, .assistant-panel.open { box-shadow: 0 20px 45px rgb(13 27 42 / 84%); }
+  .studio-tab.active { background: var(--holst-active); }
+}
+@media (prefers-reduced-motion: reduce) {
+  button { transition: none; }
+}
+
+/* Holst refinements: material-like slate chrome, sage details, parchment CTA. */
+.logo { background: var(--holst-slate); border-color: var(--holst-sage); color: var(--holst-ivory); }
+.run-button { background: var(--holst-sand); border-color: var(--holst-sand); color: var(--holst-deep); font-weight: 700; }
+.run-button:hover { background: var(--holst-ivory); border-color: var(--holst-ivory); }
+.run-button:focus-visible, .button-secondary:focus-visible, .studio-tab:focus-visible,
+.editor-tab:focus-visible { outline: 2px solid var(--holst-sand); outline-offset: 2px; }
+.engine-chip.ready .led, .status-dot, .storage-dot { background: #B4D3AC; }
+.file-item.active, .studio-tab.active { color: var(--holst-ivory); }
+.pkg-flag.native { color: var(--holst-ivory); }
+#sceneViewport { background: var(--holst-deep); }
+/* Retain the sandbox preview's own colors; avoid changing user-authored HTML. */

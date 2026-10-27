@@ -1,6 +1,12 @@
-# AstraForge 5.1 — Interactive Engineering Studio
+# AstraForge 5.3 — Holst Edition · Interactive Engineering Studio
 
 AstraForge is a **static, browser-first Python 3.14 engineering IDE** intended to run on GitHub Pages at <https://eleman07.github.io/Astraforge/>. It uses Pyodide/WebAssembly on the user's device and **requires no VPS, Docker, or paid account** for the core features.
+
+## New in 5.3 — Holst palette
+
+The project now uses the user-supplied **Holst** color palette (`#0D1B2A`, `#1B263B`, `#415A77`, `#778D7A`, `#D4C4A8`, `#F4F1DE`) across the editor, explorer, assistant, console, database studio, Web UI, PWA icons and WebGL defaults. The stylesheet `holst-theme.css` replaces the Nebula overlay. No changes were made to Python execution, ASTRA bridge, simulations, IndexedDB or package catalog logic. The HTML sandbox keeps user-authored page colors intact.
+
+Screenshots in `docs/holst-*-preview.png` are from the actual app markup and styles with sample content; they **do not** verify Pyodide or WebGL running in Chromium.
 
 ## What works in a browser
 
@@ -70,9 +76,6 @@ The IDE must not be used as an untrusted multiuser Python server; code runs loca
 ## License and third-party sources
 
 The ASTRA wheel and pinned simulation engine are independently licensed. Retain upstream notices and comply with their licenses if redistributing. Three.js and Pyodide have their own licenses. Nothing in the ZIP embeds a paid API key.
-
-## Demo
-[DEMO YT](https://youtu.be/rrmSEMpewig)
 
 ## Interactive Python SDK
 
