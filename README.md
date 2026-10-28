@@ -1,3 +1,11 @@
+## AstraForge 5.5 — OpenRouter Key Vault (Windows 11)
+
+Astra AI now supports **Save key on this device** and **Forget key**. The personal OpenRouter API key is kept in the current browser profile (IndexedDB) encrypted with a non-extractable Web Crypto AES-256-GCM key. It is automatically restored on subsequent visits to the same browser and is not embedded in GitHub code or the workspace. The AI model is also remembered. Saving is optional: you can use a temporary, session-only key without saving it. **This is convenience encryption, not protection against malicious same-origin scripts or access to the browser profile**. API calls still go directly to OpenRouter when the user sends a prompt.
+
+See [Windows 11 update tutorial](GITHUB_WINDOWS_11_OPENROUTER.md) and [test report](TEST_REPORT_5_5.md).
+
+---
+
 # AstraForge 5.4 — Observatory Azure
 
 AstraForge is a free, static, browser-first Python 3.14 engineering IDE hosted on GitHub Pages. Observatory is the layout and presentation refresh approved for release 5.4. It preserves the Python worker, 16 STEM profiles / 91 package entries, the browser ASTRA adapter, WebGL visualization, interactive forms, database browser, and optional OpenRouter assistant.

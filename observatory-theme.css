@@ -179,3 +179,15 @@ a{color:#8bccff}::selection{background:#1a5481;color:#fff}
 /* The syntax layer is decorative and must never duplicate a plain-text fallback. */
 html:not(.syntax-ready) .syntax-layer{display:none}
 html.syntax-ready .syntax-layer{display:block}
+
+/* AstraForge 5.5: local OpenRouter key vault controls */
+.ai-key-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.ai-key-actions .small-button{font-size:11px;border-radius:7px;padding:8px 11px;min-height:34px;white-space:normal}
+.ai-key-actions #btnSaveAIKey{background:#1b5b88;border:1px solid #409ce4;color:#eef8ff}
+.ai-key-actions #btnSaveAIKey:hover{background:#267ab1;border-color:#72c9ff}
+.ai-key-actions .ai-key-forget{background:transparent;color:#a9c9dd;border:1px solid #3b5870}
+.ai-key-actions .ai-key-forget:hover{border-color:#8eb8da;color:#fff}
+.ai-key-actions button:disabled{opacity:.45;cursor:wait}
+.ai-key-status{display:block;margin-top:9px;font-size:11px;color:#a9d9f4;line-height:1.5;overflow-wrap:anywhere}
+.ai-key-status.error{color:#f6b4ba}
+.ai-key-note{font-size:10.5px;line-height:1.55;color:#a5bbcd;margin:8px 0 2px}

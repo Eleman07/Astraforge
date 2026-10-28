@@ -27,7 +27,7 @@ class ObservatoryAzureTests(unittest.TestCase):
             self.assertIn(color,css.lower() if color!='#081522' else html.lower())
     def test_service_worker_pwa(self):
         sw=(ROOT/'sw.js').read_text()
-        self.assertIn('astraforge-ghpages-v11-observatory-azure',sw)
+        self.assertIn('astraforge-ghpages-v12-openrouter-vault',sw)
         self.assertIn("'./observatory-theme.css'",sw)
         manifest=json.loads((ROOT/'manifest.webmanifest').read_text())
         self.assertEqual(manifest['background_color'],'#081522')

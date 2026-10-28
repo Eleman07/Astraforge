@@ -1,5 +1,6 @@
 /** AstraForge IDE: offline-first files, WebAssembly Python and curated STEM libraries. */
 import {CATALOG,PROFILES,forProfile,BROWSER_IDS,BUNDLED_IDS,STDLIB_IDS,PYODIDE_VERSION} from './catalog.js';
+import {saveOpenRouterKey, loadOpenRouterKey, forgetOpenRouterKey} from './openrouter-vault.js';
 const $=id=>document.getElementById(id);
 const DEMO=`# Circular low-Earth orbit — two-body approximation
 # Change the altitude and run the script.
@@ -365,9 +366,57 @@ function toggleMobile(id){
  }
  const sidebar=$(id);sidebar.classList.toggle('open');
 }
-async function askAI(){const key=$('aiKey').value.trim(),prompt=$('aiPrompt').value.trim(),model=$('aiModel').value.trim()||'openrouter/free';if(!key){toast('Enter your OpenRouter API key');return;}if(!prompt){toast('Write your question first');return;}const add=(text,who)=>{const bubble=document.createElement('div');bubble.className='ai-msg '+who;bubble.textContent=text;$('aiMessages').append(bubble);$('aiMessages').scrollTop=$('aiMessages').scrollHeight;};add(prompt,'user');$('btnAsk').disabled=true;
+// OpenRouter key remains only in this browser profile. Never include it in app files,
+// workspace exports, Git commits, logs or page URLs.
+let rememberedAIKey = null;
+let aiVaultReady = Promise.resolve();
+function aiKeyStatus(message, isError=false) {
+ const status=$('aiKeyStatus');status.textContent=message;
+ status.classList.toggle('error',Boolean(isError));
+}
+function setupAIKeyStorage() {
+ const field=$('aiKey'),model=$('aiModel');
+ try { const rememberedModel=localStorage.getItem('astraforge-openrouter-model-v1');
+  if(rememberedModel) model.value=rememberedModel; } catch { /* Browser storage disabled. */ }
+ model.addEventListener('change',()=>{try{localStorage.setItem('astraforge-openrouter-model-v1',model.value.trim().slice(0,180));}catch{/* ignore */}});
+ field.addEventListener('input',()=>{
+  aiKeyStatus(field.value ? 'New key entered — click Save key to remember it on this device.' :
+    rememberedAIKey ? 'Saved key available on this device.' : 'Session-only until you save a key.');
+ });
+ aiVaultReady=loadOpenRouterKey().then(key=>{
+  rememberedAIKey=key;
+  aiKeyStatus(key?'Saved key loaded automatically from this browser.':'No key stored on this device.');
+ }).catch(error=>{rememberedAIKey=null;aiKeyStatus('Local key storage unavailable: '+error.message,true);});
+ $('btnSaveAIKey').addEventListener('click',async()=>{
+  await aiVaultReady;
+  const value=field.value.trim();
+  if(!value){aiKeyStatus('Enter a new key before saving.',true);return;}
+  const button=$('btnSaveAIKey');button.disabled=true;
+  try{
+   rememberedAIKey=await saveOpenRouterKey(value);
+   field.value='';
+   field.placeholder='Saved securely on this device';
+   aiKeyStatus('Key encrypted and saved locally. It will load automatically next time.');
+   toast('OpenRouter key saved on this device');
+  }catch(error){aiKeyStatus('Could not save key: '+error.message,true);}
+  finally{button.disabled=false;}
+ });
+ $('btnForgetAIKey').addEventListener('click',async()=>{
+  await aiVaultReady;
+  const button=$('btnForgetAIKey');button.disabled=true;
+  try{
+   await forgetOpenRouterKey();rememberedAIKey=null;field.value='';field.placeholder='sk-or-...';
+   aiKeyStatus('Saved key deleted from this browser.');toast('Saved OpenRouter key removed');
+  }catch(error){aiKeyStatus('Could not delete key: '+error.message,true);}
+  finally{button.disabled=false;}
+ });
+}
+async function askAI(){await aiVaultReady;
+ const key=$('aiKey').value.trim()||rememberedAIKey;
+ const prompt=$('aiPrompt').value.trim(),model=$('aiModel').value.trim()||'openrouter/free';
+ if(!key){toast('Enter your OpenRouter API key or save one first');return;}if(!prompt){toast('Write your question first');return;}const add=(text,who)=>{const bubble=document.createElement('div');bubble.className='ai-msg '+who;bubble.textContent=text;$('aiMessages').append(bubble);$('aiMessages').scrollTop=$('aiMessages').scrollHeight;};add(prompt,'user');$('btnAsk').disabled=true;
  try{const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json','X-Title':'AstraForge IDE'},body:JSON.stringify({model,messages:[{role:'system',content:'You are a precise engineering and Python development assistant. Explain assumptions and limitations. Never claim to have executed code that you have not run.'},{role:'user',content:prompt+'\n\nCurrent Python file '+active+':\n```python\n'+$('editor').value.slice(0,14000)+'\n```'}],max_tokens:1600})});const answer=await res.json();if(!res.ok)throw Error(answer?.error?.message||'OpenRouter HTTP '+res.status);add(typeof answer?.choices?.[0]?.message?.content==='string'?answer.choices[0].message.content:JSON.stringify(answer?.choices?.[0]?.message?.content??''),'assistant');$('aiPrompt').value='';}catch(e){add('Request failed: '+e.message,'assistant');}finally{$('btnAsk').disabled=false;}}
-async function init(){for(const [key,p] of Object.entries(PROFILES)){const o=document.createElement('option');o.value=key;o.textContent=p.name;$('role').append(o);}
+async function init(){setupAIKeyStorage();for(const [key,p] of Object.entries(PROFILES)){const o=document.createElement('option');o.value=key;o.textContent=p.name;$('role').append(o);}
  try{const saved=await storageGet('workspace');if(saved?.files&&typeof saved.files==='object'){const clean=Object.fromEntries(Object.entries(saved.files).filter(([n,s])=>safeFile(n)&&typeof s==='string'&&s.length<=1048576));if(Object.keys(clean).length){files=clean;active=clean[saved.active]!==undefined?saved.active:Object.keys(clean)[0];}}if(saved?.role&&PROFILES[saved.role])$('role').value=saved.role;if(saved?.selectedByProfile&&typeof saved.selectedByProfile==='object'){for(const k of Object.keys(PROFILES)){const savedSelection=saved.selectedByProfile[k];if(Array.isArray(savedSelection))selectedByProfile[k]=savedSelection.filter(s=>CATALOG.some(p=>p.id===s));}}}catch(e){console.warn('IndexedDB:',e);toast('Local workspace persistence not available');}
  try{const savedDbs=await storageGet('local-databases');if(savedDbs&&typeof savedDbs==='object')dbFiles=savedDbs;}catch(e){console.warn('Database recovery:',e)}
  $('editor').value=files[active];renderFiles();updateLineNumbers();updateProfile();
